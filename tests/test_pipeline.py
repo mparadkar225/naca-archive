@@ -44,6 +44,8 @@ def test_search(built):
     hits = con.execute("SELECT kind, title FROM search WHERE search MATCH 'power coefficient' ORDER BY rank(matchinfo(search, 'pcx')) DESC").fetchall()
     assert ("figure", "Figure 9") in hits and ("figure", "Figure 10") in hits
     assert con.execute("SELECT count(*) FROM search WHERE search MATCH 'efficiencies' AND kind='table'").fetchone()[0] == 1
-    x, y = con.execute("SELECT c.x, c.y FROM curves c JOIN figures f ON f.id=c.figure_id WHERE f.label='9' AND c.label='15°'").fetchone()
-    x, y = json.loads(x), json.loads(y)
+    # the 15° curve, found by position (labels are best-effort OCR and vary with Tesseract version)
+    curves = [(json.loads(x), json.loads(y)) for x, y in con.execute(
+        "SELECT c.x, c.y FROM curves c JOIN figures f ON f.id=c.figure_id WHERE f.label='9'")]
+    x, y = min(curves, key=lambda c: c[0][0])
     assert 0.24 < x[0] < 0.30 and 0.035 < max(y) < 0.047
