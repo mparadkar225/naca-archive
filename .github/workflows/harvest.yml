@@ -1,0 +1,87 @@
+# Search NTRS, download new PDFs, extract text/figures/tables, commit the extracted data to
+# the `data` branch and publish the searchable site to GitHub Pages.
+#
+# NTRS terms: <= 500 requests / 15 min (the client keeps under 450), check redistributions
+# at least weekly (done every run), link to the NTRS citation rather than redistributing
+# the PDFs. PDFs and figure images live only in the Actions cache, never in git; the site
+# shows figure crops and links each report to NTRS.
+name: harvest
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+    inputs:
+      max_new:
+        description: "new PDFs to download this run"
+        default: "120"
+      budget_min:
+        description: "minutes of processing before stopping"
+        default: "300"
+      queries:
+        description: "query set in queries/"
+        default: "propellers.toml"
+concurrency:
+  group: harvest
+  cancel-in-progress: false
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    environment:
+      name: github-pages
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out the data branch into data/
+        run: |
+          if git ls-remote --exit-code --heads origin data >/dev/null; then
+            git fetch --depth 1 origin data
+            git worktree add data origin/data
+            git -C data switch -c data-run
+          else
+            git worktree add --orphan -b data-run data
+          fi
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: sudo apt-get update && sudo apt-get install -y tesseract-ocr
+      - run: pip install -e .
+      - name: Restore PDFs and figure images
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            data/pdfs
+            data/reports/*/fig
+          key: files-${{ github.run_id }}
+          restore-keys: files-
+      - run: naca redistributions
+      - run: naca harvest --queries queries/${{ inputs.queries || 'propellers.toml' }}
+      - run: naca download --max-new ${{ inputs.max_new || 120 }}
+      - run: naca process --budget-min ${{ inputs.budget_min || 300 }}
+      - name: Save PDFs and figure images
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            data/pdfs
+            data/reports/*/fig
+          key: files-${{ github.run_id }}
+      - run: naca build-db && naca site
+      - name: Check the digitizer against NACA Report 747 (when processed)
+        continue-on-error: true
+        run: pip install pytest && NACA_DATA=data pytest -s -q tests/test_naca747.py
+      - name: Commit extracted data
+        run: |
+          cd data
+          printf 'pdfs/\nreports/*/fig/\n' > .gitignore
+          git add -A
+          git -c user.name="naca-archive bot" -c user.email="actions@users.noreply.github.com" \
+            commit -q -m "Harvest $(date -u +%F): $(ls reports 2>/dev/null | wc -l) reports" || echo "no changes"
+          git push origin HEAD:data
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/site
+      - uses: actions/deploy-pages@v4

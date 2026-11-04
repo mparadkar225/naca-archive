@@ -1,0 +1,38 @@
+# Propeller corpus: NACA (1915-1958) and NASA propeller / prop-fan work.
+# Each [[query]] is sent to NTRS /citations/search (nested tables become dotted params,
+# e.g. published.lt). A record is kept only if its title or abstract matches `keep`
+# and doesn't match `drop` (case-insensitive regexes), so broad queries stay on topic.
+
+keep = '''propell|airscrew|air-screw|prop-?fan|counter-?rotat|contra-?rotat|dual-?rotat|tractor screw|blade[- ]element|slipstream|spinner'''
+drop = '''rocket propell|propellant|marine propell|ship propell|torpedo|submarine'''
+
+[[query]]
+name = "naca-propeller"
+q = "propeller"
+published = { lt = "1959" }
+
+[[query]]
+name = "naca-airscrew"
+q = "airscrew"
+published = { lt = "1959" }
+
+[[query]]
+name = "naca-dual-rotating"
+q = "dual-rotating propeller"
+published = { lt = "1959" }
+
+[[query]]
+name = "naca-slipstream"
+q = "slipstream wing propeller"
+published = { lt = "1959" }
+
+[[query]]
+name = "nasa-propeller"
+q = "propeller"
+published = { gte = "1959" }
+subjectCategory = ["Aircraft Propulsion and Power", "Aerodynamics", "Aircraft Design, Testing and Performance"]
+
+[[query]]
+name = "nasa-propfan"
+q = "prop-fan counter-rotation"
+published = { gte = "1959" }

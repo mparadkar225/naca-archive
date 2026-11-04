@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "naca-archive"
+version = "0.1.0"
+description = "Search, download and extract NACA/NASA reports (text, tables, digitized charts) into a searchable database"
+readme = "README.md"
+license = {text = "GPL-3.0-or-later"}
+requires-python = ">=3.11"
+dependencies = ["numpy", "pillow>=10.1", "opencv-python-headless", "pymupdf"]
+
+[project.optional-dependencies]
+test = ["pytest", "pytest-xdist", "matplotlib"]
+
+[project.scripts]
+naca = "nacaarchive.cli:main"
+
+[tool.setuptools]
+packages = ["nacaarchive"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::FutureWarning"]
