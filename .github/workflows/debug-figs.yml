@@ -1,7 +1,8 @@
 # Push the figure crops and digitizing overlays of a few reports to a temporary
 # `debug-figs` branch, so the digitizer can be tuned on real scans from a machine that
-# can't reach the Actions cache. Figure crops only (the site publishes the same images);
-# never PDFs. Delete the branch when done.
+# can't reach the Actions cache. Figure crops (the site publishes the same images) and,
+# with `pages`, whole pages rendered as images (for tables the OCR missed); never PDFs.
+# Delete the branch when done.
 name: debug-figs
 on:
   workflow_dispatch:
@@ -9,6 +10,10 @@ on:
       ids:
         description: "NTRS ids, space separated"
         required: true
+      pages:
+        description: "Whole pages to render as 300 dpi images, e.g. '19930093302:14,15 20050019331:13'"
+        required: false
+        default: ""
 permissions:
   contents: write
 jobs:
@@ -30,7 +35,17 @@ jobs:
           for id in ${{ inputs.ids }}; do
             [ -d data/reports/$id/fig ] && cp -r data/reports/$id/fig out/$id
           done
-          ls out
+          if [ -n "${{ inputs.pages }}" ]; then
+            sudo apt-get install -y -qq poppler-utils > /dev/null
+            for spec in ${{ inputs.pages }}; do
+              id=${spec%%:*}
+              mkdir -p out/$id/pages
+              for p in $(echo ${spec#*:} | tr ',' ' '); do
+                pdftoppm -r 300 -gray -png -f $p -l $p data/pdfs/$id.pdf out/$id/pages/p$p
+              done
+            done
+          fi
+          ls -R out | head -100
           cd out
           git init -q -b debug-figs
           git add -A
