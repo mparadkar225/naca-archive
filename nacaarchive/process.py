@@ -15,6 +15,8 @@ reprocessing with a newer pipeline keeps them. A correction may set:
 from __future__ import annotations
 
 import json
+import re
+from collections import Counter
 from pathlib import Path
 
 import cv2
@@ -100,6 +102,17 @@ def process_report(pdf: Path, record: dict, data: Path, force_ocr: bool = False,
     (out / "fig").mkdir(parents=True, exist_ok=True)
     reviews = (reviews or data / "reviews") / rid
     figs, tabs, page_rows = [], [], []
+    used: set[str] = set()
+
+    def unique(key: str) -> str:
+        """A page can carry two captions with the same label (a caption and a line that
+        starts with "Figure 3."): keys must still be unique within the report."""
+        k, n = key, 2
+        while k in used:
+            k, n = f"{key}-{n}", n + 1
+        used.add(k)
+        return k
+
     for page in open_pages(pdf, force_ocr=force_ocr):
         img = page.image
         ang = F.deskew_angle(img)
@@ -113,7 +126,7 @@ def process_report(pdf: Path, record: dict, data: Path, force_ocr: bool = False,
         F.attach_captions(grids, caps)
         claimed = set()
         for k, g in enumerate(grids):
-            key = f"p{page.number}-{k}"
+            key = unique(f"p{page.number}-{k}")
             try:
                 res = ad.digitize(img, g)
                 fig = res.as_dict()
@@ -132,7 +145,7 @@ def process_report(pdf: Path, record: dict, data: Path, force_ocr: bool = False,
         # figures without a grid: indexed (caption + image), not digitized
         for c in caps:
             if c["kind"] == "figure" and c["label"] not in claimed:
-                key = f"p{page.number}-c{c['label']}"
+                key = unique(f"p{page.number}-c{c['label']}")
                 box = figure_region(img, page.words, c)
                 if box:
                     Image.fromarray(img[box[1]:box[3], box[0]:box[2]]).save(out / "fig" / f"{key}.jpg", quality=80)
@@ -142,7 +155,7 @@ def process_report(pdf: Path, record: dict, data: Path, force_ocr: bool = False,
             elif c["kind"] == "table":
                 t = T.table_after(page.words, c)
                 if t:
-                    t.update(page=page.number, key=f"p{page.number}-t{c['label']}")
+                    t.update(page=page.number, key=unique(f"p{page.number}-t{c['label']}"))
                     tabs.append(t)
     report = dict(
         id=rid, number=record.get("_number"), title=record.get("title"), year=record.get("_year"),
@@ -153,8 +166,12 @@ def process_report(pdf: Path, record: dict, data: Path, force_ocr: bool = False,
     (out / "pages.jsonl").write_text("".join(json.dumps(p) + "\n" for p in page_rows))
     (out / "report.json").write_text(json.dumps(report, indent=1))
     n_auto = sum(f["status"] in ("auto", "accepted") for f in figs if f["kind"] == "chart")
-    log(f"{rid} {report['number'] or ''}: {len(page_rows)} pages, {len(figs)} figures "
-        f"({n_auto} digitized automatically), {len(tabs)} tables")
+    charts = [f for f in figs if f["kind"] == "chart"]
+    src = Counter(p["source"] for p in page_rows)
+    why = Counter(re.sub(r"[\d.]+", "#", r) for f in charts for r in f.get("reasons") or [])
+    log(f"{rid} {report['number'] or ''}: {len(page_rows)} pages ({', '.join(f'{v} {k}' for k, v in src.items())}), "
+        f"{len(figs)} figures, {len(charts)} with grids ({n_auto} digitized automatically), {len(tabs)} tables"
+        + (f"; review: {'; '.join(f'{v}x {k}' for k, v in why.most_common(3))}" if why else ""))
     return report
 
 

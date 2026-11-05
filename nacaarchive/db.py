@@ -113,7 +113,12 @@ def build(data: Path, out: Path, include_page_text: bool = True) -> dict:
                 con.execute("INSERT INTO pages VALUES (?,?,?,?)", (rid, p["page"], p["text"], p["source"]))
                 con.execute("INSERT INTO search VALUES ('page',?,?,?,?)", (rid, p["page"], fts_text(r.get("title")), fts_text(p["text"])))
                 n["pages"] += 1
+        seen: set[str] = set()
         for f in r.get("figures", []):
+            if f["key"] in seen:  # older report.json files could repeat a key; keep the first
+                print(f"{rid}: duplicate figure key {f['key']} skipped")
+                continue
+            seen.add(f["key"])
             xs, ys = f.get("x_side"), f.get("y_side")
             axes = f.get("axes") or {}
             cur = con.execute(
@@ -134,7 +139,12 @@ def build(data: Path, out: Path, include_page_text: bool = True) -> dict:
                 con.execute("INSERT INTO curves(figure_id,idx,label,n,x,y) VALUES (?,?,?,?,?,?)",
                             (fid, i, c.get("label"), len(c["x"]), json.dumps(c["x"]), json.dumps(c["y"])))
                 n["curves"] += 1
+        seen = set()
         for t in r.get("tables", []):
+            if t["key"] in seen:
+                print(f"{rid}: duplicate table key {t['key']} skipped")
+                continue
+            seen.add(t["key"])
             cur = con.execute(
                 "INSERT INTO tables(report_id,key,page,label,caption,ncols,rows,status,confidence) VALUES (?,?,?,?,?,?,?,?,?)",
                 (rid, t["key"], t["page"], t["label"], t["caption"], t["ncols"], json.dumps(t["rows"]), t["status"], t["confidence"]))

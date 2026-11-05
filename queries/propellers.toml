@@ -30,7 +30,7 @@ published = { lt = "1959" }
 name = "nasa-propeller"
 q = "propeller"
 published = { gte = "1959" }
-subjectCategory = ["Aircraft Propulsion and Power", "Aerodynamics", "Aircraft Design, Testing and Performance"]
+# a subjectCategory filter here returned nothing on the first live run; `keep` does the filtering
 
 [[query]]
 name = "nasa-propfan"

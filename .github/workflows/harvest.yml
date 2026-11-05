@@ -69,11 +69,8 @@ jobs:
             data/pdfs
             data/reports/*/fig
           key: files-${{ github.run_id }}
-      - run: naca build-db && naca site
-      - name: Check the digitizer against NACA Report 747 (when processed)
-        continue-on-error: true
-        run: pip install pytest && NACA_DATA=data pytest -s -q tests/test_naca747.py
       - name: Commit extracted data
+        if: always()
         run: |
           cd data
           printf 'pdfs/\nreports/*/fig/\n' > .gitignore
@@ -81,6 +78,10 @@ jobs:
           git -c user.name="naca-archive bot" -c user.email="actions@users.noreply.github.com" \
             commit -q -m "Harvest $(date -u +%F): $(ls reports 2>/dev/null | wc -l) reports" || echo "no changes"
           git push origin HEAD:data
+      - run: naca build-db && naca site
+      - name: Check the digitizer against NACA Report 747 (when processed)
+        continue-on-error: true
+        run: pip install pytest && NACA_DATA=data pytest -s -q tests/test_naca747.py
       - uses: actions/upload-pages-artifact@v3
         with:
           path: build/site
