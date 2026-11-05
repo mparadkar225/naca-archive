@@ -1,0 +1,29 @@
+{
+ "queries": {
+  "naca-airscrew": {
+   "kept": 4,
+   "seen": 4
+  },
+  "naca-dual-rotating": {
+   "kept": 28,
+   "seen": 28
+  },
+  "naca-propeller": {
+   "kept": 668,
+   "seen": 763
+  },
+  "naca-slipstream": {
+   "kept": 38,
+   "seen": 46
+  },
+  "nasa-propeller": {
+   "kept": 1173,
+   "seen": 1206
+  },
+  "nasa-propfan": {
+   "kept": 4,
+   "seen": 4
+  }
+ },
+ "redistributions_checked": "2026-11-05"
+}
