@@ -36,3 +36,8 @@ published = { gte = "1959" }
 name = "nasa-propfan"
 q = "prop-fan counter-rotation"
 published = { gte = "1959" }
+
+[[query]]
+name = "naca-p47"
+q = "P-47 propeller"
+published = { lt = "1959" }

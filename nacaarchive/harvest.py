@@ -148,10 +148,21 @@ def check_redistributions(data: Path, client: Client | None = None, log=print) -
     return acted
 
 
+def select(recs: dict, ids=None, match: str | None = None) -> dict:
+    """Records chosen by NTRS id and/or a regex over title and abstract (case-insensitive)."""
+    out = dict(recs)
+    if ids:
+        out = {k: v for k, v in out.items() if str(k) in {str(i) for i in ids}}
+    if match:
+        rx = re.compile(match, re.I)
+        out = {k: v for k, v in out.items() if rx.search(f"{v.get('title') or ''} {v.get('abstract') or ''}")}
+    return out
+
+
 def download_all(data: Path, pdf_dir: Path, client: Client | None = None, max_new: int | None = None,
-                 log=print) -> list[Path]:
+                 log=print, ids=None, match: str | None = None) -> list[Path]:
     client = client or Client()
-    recs = _read_jsonl(data / "metadata" / "records.jsonl")
+    recs = select(_read_jsonl(data / "metadata" / "records.jsonl"), ids, match)
     got, new = [], 0
     for rid, r in sorted(recs.items()):
         if max_new is not None and new >= max_new and not (pdf_dir / f"{rid}.pdf").exists():

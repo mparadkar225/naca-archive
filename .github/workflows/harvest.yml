@@ -20,6 +20,9 @@ on:
       queries:
         description: "query set in queries/"
         default: "propellers.toml"
+      select:
+        description: "only download and process records whose title/abstract matches this regex (e.g. P-?47|Thunderbolt)"
+        default: ""
 concurrency:
   group: harvest
   cancel-in-progress: false
@@ -59,8 +62,12 @@ jobs:
           restore-keys: files-
       - run: naca redistributions
       - run: naca harvest --queries queries/${{ inputs.queries || 'propellers.toml' }}
-      - run: naca download --max-new ${{ inputs.max_new || 120 }}
-      - run: naca process --budget-min ${{ inputs.budget_min || 300 }}
+      - run: naca download --max-new ${{ inputs.max_new || 120 }} ${SELECT:+--match "$SELECT"}
+        env:
+          SELECT: ${{ inputs.select }}
+      - run: naca process --budget-min ${{ inputs.budget_min || 300 }} ${SELECT:+--match "$SELECT"}
+        env:
+          SELECT: ${{ inputs.select }}
       - name: Save PDFs and figure images
         if: always()
         uses: actions/cache/save@v4

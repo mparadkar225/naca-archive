@@ -25,10 +25,13 @@ def main(argv=None):
     d = sub.add_parser("download", help="download PDFs of harvested records")
     d.add_argument("--pdfs", type=Path, default=None, help="PDF cache (default data/pdfs)")
     d.add_argument("--max-new", type=int, help="download at most this many new PDFs")
+    d.add_argument("--ids", nargs="*", help="only these NTRS ids")
+    d.add_argument("--match", help="only records whose title or abstract matches this regex")
 
     p = sub.add_parser("process", help="extract text, figures, tables from downloaded PDFs")
     p.add_argument("--pdfs", type=Path, default=None)
     p.add_argument("--ids", nargs="*", help="only these NTRS ids")
+    p.add_argument("--match", help="only records whose title or abstract matches this regex")
     p.add_argument("--all", action="store_true", help="reprocess even if up to date")
     p.add_argument("--force-ocr", action="store_true")
     p.add_argument("--reviews", type=Path, default=ROOT / "reviews", help="review corrections")
@@ -56,13 +59,13 @@ def main(argv=None):
         check_redistributions(data)
     elif a.cmd == "download":
         from .harvest import download_all
-        download_all(data, a.pdfs or data / "pdfs", max_new=a.max_new)
+        download_all(data, a.pdfs or data / "pdfs", max_new=a.max_new, ids=a.ids, match=a.match)
     elif a.cmd == "process":
-        from .harvest import _read_jsonl
+        from .harvest import _read_jsonl, select
         from .process import needs_processing, process_report
         pdfs = a.pdfs or data / "pdfs"
         recs = _read_jsonl(data / "metadata" / "records.jsonl")
-        ids = a.ids or sorted(recs)
+        ids = sorted(select(recs, a.ids, a.match))
         t0, done, failed = time.time(), 0, []
         for rid in ids:
             pdf = pdfs / f"{rid}.pdf"
