@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 import numpy as np
 from PIL import Image, ImageDraw
 
+from . import symbols as SY
 from .figures import Grid
 from .pages import Word, tesseract
 
@@ -320,8 +321,12 @@ def _bridge(ink: np.ndarray, vcols, hrows, hw: int, reach: int = 7):
 
 
 def track_curves(ink: np.ndarray, step: int = 2, window: float = 10.0, max_gap: int = 45,
-                 max_run: int = 70, min_span: float = 0.05) -> list[Track]:
-    """Link ink runs column by column into tracks (pixel coordinates of ``ink``)."""
+                 max_run: int = 70, min_span: float = 0.05, min_piece: float | None = None) -> list[Track]:
+    """Link ink runs column by column into tracks (pixel coordinates of ``ink``). Pieces
+    shorter than min_piece (default min_span) are dropped before broken tracks are rejoined,
+    tracks shorter than min_span after; a faired curve cut up by data-point symbols needs
+    a small min_piece."""
+    min_piece = min_span if min_piece is None else min_piece
     H, W = ink.shape
     live: list[Track] = []
     done: list[Track] = []
@@ -365,11 +370,12 @@ def track_curves(ink: np.ndarray, step: int = 2, window: float = 10.0, max_gap: 
                 keep.append(t)
         live = keep
     done += live
-    min_pts = max(8, int(min_span * W / step * 0.5))
-    tracks = [t for t in done if len(t.pts) >= min_pts and (t.pts[-1][0] - t.pts[0][0]) >= min_span * W]
+    min_pts = max(8, int(min_piece * W / step * 0.5))
+    tracks = [t for t in done if len(t.pts) >= min_pts and (t.pts[-1][0] - t.pts[0][0]) >= min_piece * W]
     for t in tracks:                      # end points are often junk from a crossing
         t.pts = t.pts[3:-3]
     tracks = _join(tracks, max_join=3 * max_gap)
+    tracks = [t for t in tracks if (t.pts[-1][0] - t.pts[0][0]) >= min_span * W]
     return _dedupe(tracks)
 
 
@@ -459,13 +465,14 @@ class Result:
     status: str
     reasons: list
     ink_level: int = 0
+    points: list = field(default_factory=list)   # dicts: symbol, glyph, n, x[], y[], px[], py[]
 
     def as_dict(self):
         return dict(box=list(self.grid.box), label=self.grid.label, caption=self.grid.caption,
                     axes={k: a.as_dict() for k, a in self.axes.items()},
                     x_side=self.x_axis.side if self.x_axis else None,
                     y_side=self.y_axis.side if self.y_axis else None,
-                    curves=self.curves, coverage=round(self.coverage, 3), status=self.status,
+                    curves=self.curves, points=self.points, coverage=round(self.coverage, 3), status=self.status,
                     reasons=self.reasons, notes=self.grid.notes)
 
 
@@ -484,13 +491,32 @@ def digitize(img: np.ndarray, g: Grid, min_points: int = 15) -> Result:
     # labels and other text inside the plot
     x0, y0, x1, y1 = g.box
     inner = inner_text(img, g)
-    ink, level = ink_mask(img, g, [(w.x0, w.y0, w.x1, w.y1) for w in inner])
-    tracks = track_curves(ink)
+    # data-point symbols first (a symbol can be read as "O" or "D"; real words keep theirs)
+    raw, level = ink_mask(img, g)
+    boxes = [(w.x0 - x0, w.y0 - y0, w.x1 - x0, w.y1 - y0, sum(ch.isalnum() for ch in w.text) >= 2) for w in inner]
+    with_grid = img[y0:y1 + 1, x0:x1 + 1] < level
+    syms = SY.find_symbols(raw, boxes, raw=with_grid, vlines=[v - x0 for v in g.vlines],
+                           hlines=[h - y0 for h in g.hlines])
+    inner = [w for w in inner if not any(s.box[0] - 2 <= w.cx - x0 <= s.box[2] + 2 and s.box[1] - 2 <= w.cy - y0 <= s.box[3] + 2
+                                         for s in syms)]
+    ink, _ = ink_mask(img, g, [(w.x0, w.y0, w.x1, w.y1) for w in inner], level=level)
+    ink = SY.erase(ink, syms)
+    tracks = track_curves(ink, min_piece=0.012) if syms else track_curves(ink)
     cov = coverage(ink, tracks)
-    if not tracks:
-        reasons.append("no curves found")
-    elif cov < 0.85:
-        reasons.append(f"tracks cover {cov:.0%} of the ink (steep curves, symbols or text left over)")
+    points = SY.series(syms, xa.to_val if xa is not None and xa.ok else None,
+                       ya.to_val if ya is not None and ya.ok else None, x0, y0)
+    if not tracks and not syms:
+        reasons.append("no curves or data points found")
+    elif (tracks or ink.sum() > 2000) and cov < 0.85:
+        msg = f"tracks cover {cov:.0%} of the ink (steep curves, symbols or text left over)"
+        if syms:   # the points are the data; a faired curve is easy to redo from them
+            g.notes.append(f"faired curves partly traced: {msg}")
+        else:
+            reasons.append(msg)
+    lone = sum(p["n"] for p in points if p["n"] == 1)
+    if len(points) > 8 or (syms and lone > 0.15 * len(syms)):
+        reasons.append(f"{len(points)} kinds of data-point symbol, {lone} of them single: "
+                       "overlapping or unusual symbols probably misread")
     _attach_labels(tracks, inner, x0, y0)
     unlabeled = sum(t.label is None for t in tracks)
     if tracks and unlabeled:
@@ -505,7 +531,7 @@ def digitize(img: np.ndarray, g: Grid, min_points: int = 15) -> Result:
             c["y"] = [round(float(v), 6) for v in ya.to_val(py)]
         curves.append(c)
     status = "auto" if not reasons else "needs_review"
-    return Result(g, axes, xa, ya, curves, cov, status, reasons, level)
+    return Result(g, axes, xa, ya, curves, cov, status, reasons, level, points)
 
 
 def inner_text(img: np.ndarray, g: Grid, max_h: int = 75, max_w: int = 90) -> list[Word]:
@@ -606,6 +632,13 @@ def overlay(img: np.ndarray, res: Result, width: int = 1400) -> Image.Image:
         d.line(list(zip(c["px"], c["py"])), fill=col, width=3)
         if c.get("label"):
             d.text((c["px"][0] + 4, c["py"][0] - 36), c["label"], fill=col, font=font)
+    for k, p in enumerate(res.points):
+        col = COLORS[(k + 3) % len(COLORS)]
+        for px, py in zip(p["px"], p["py"]):
+            d.rectangle((px - 15, py - 15, px + 15, py + 15), outline=col, width=3)
+            d.line((px - 4, py, px + 4, py), fill=col, width=2)
+            d.line((px, py - 4, px, py + 4), fill=col, width=2)
+        d.text((x1 - 420, y0 + 8 + 34 * k), f"{p['symbol']} ({p['n']})", fill=col, font=font)
     rx0, ry0, rx1, ry1 = res.grid.region
     im = im.crop((rx0, ry0, rx1, ry1))
     if im.width > width:

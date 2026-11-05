@@ -30,6 +30,9 @@ class Chart:
     ylabel: str = "CP"
     curves: dict = field(default_factory=dict)  # label -> (x array, y array)
     dashed: tuple = ()
+    points: dict = field(default_factory=dict)  # name -> (x array, y array, matplotlib marker)
+    grid_color: str = "0.55"
+    labels: bool = True                          # curve labels inside the plot
 
 
 def default_chart(seed=0) -> Chart:
@@ -55,9 +58,9 @@ def render_page(chart: Chart, figure_no=9, table=False, seed=0, skew_deg=0.35, s
     ax.set_xlim(x0, x1)
     ax.set_ylim(y0, y1)
     for v in np.arange(x0, x1 + xs / 2, xs):
-        ax.axvline(v, color="0.55", lw=0.6, zorder=0)
+        ax.axvline(v, color=chart.grid_color, lw=0.6, zorder=0)
     for v in np.arange(y0, y1 + ys / 2, ys):
-        ax.axhline(v, color="0.55", lw=0.6, zorder=0)
+        ax.axhline(v, color=chart.grid_color, lw=0.6, zorder=0)
     ax.set_xticks(np.arange(x0, x1 + xl / 2, xl))
     ax.set_yticks(np.arange(y0, y1 + yl / 2, yl))
     fmt = lambda s: (lambda v, _: f"{v:.{max(0, -int(np.floor(np.log10(s))))}f}".replace("0.", ".", 1)
@@ -68,14 +71,20 @@ def render_page(chart: Chart, figure_no=9, table=False, seed=0, skew_deg=0.35, s
     for lab in ax.get_xticklabels() + ax.get_yticklabels():
         lab.set_family("serif")
     for s in ax.spines.values():
-        s.set_color("0.55")
+        s.set_color(chart.grid_color)
         s.set_linewidth(0.6)
     ax.set_xlabel(chart.xlabel, family="serif", fontsize=11)
     ax.set_ylabel(chart.ylabel, family="serif", fontsize=11)
     for k, (lab, (cx, cy)) in enumerate(chart.curves.items()):
         ax.plot(cx, cy, "k", lw=1.6, ls="--" if lab in chart.dashed else "-")
-        i = int(len(cx) * 0.15)
-        ax.text(cx[i], cy[i] + 0.035 * (y1 - y0), lab, family="serif", fontsize=10, ha="center")
+        if chart.labels:
+            i = int(len(cx) * 0.15)
+            ax.text(cx[i], cy[i] + 0.035 * (y1 - y0), lab, family="serif", fontsize=10, ha="center")
+    for name, (px_, py_, marker) in chart.points.items():
+        # hollow NACA-style symbols with a dot at the exact point, drawn over the curve
+        ax.plot(px_, py_, ls="none", marker=marker, ms=8 if marker != "^" else 9, mfc="white", mec="k",
+                mew=0.9, zorder=5)
+        ax.plot(px_, py_, ls="none", marker="o", ms=0.9, mfc="k", mec="k", zorder=6)
     fig.text(0.5, 0.36, f"FIGURE {figure_no}.—Power coefficient against V/nD for several blade angles.",
              ha="center", family="serif", fontsize=10)
     if table:

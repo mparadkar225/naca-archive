@@ -30,7 +30,7 @@ def built(tmp_path_factory):
 
 def test_report(built):
     d, report, _, counts = built
-    assert counts == {"reports": 1, "pages": 2, "figures": 2, "curves": 10, "tables": 1}
+    assert counts == {"reports": 1, "pages": 2, "figures": 2, "curves": 10, "points": 0, "tables": 1}
     figs = {f["label"]: f for f in report["figures"]}
     assert set(figs) == {"9", "10"} and figs["9"]["status"] == "auto"
     assert figs["10"]["status"] == "accepted" and figs["10"]["curves"][1]["label"] == "20°"

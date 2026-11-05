@@ -83,7 +83,7 @@ def _apply_review(fig: dict, rev: dict, res: ad.Result | None):
                 else:
                     res.y_axis = ax
         if res.x_axis is not None and res.y_axis is not None:
-            for c in fig["curves"]:
+            for c in fig["curves"] + (fig.get("points") or []):
                 c["x"] = [round(float(v), 6) for v in res.x_axis.to_val(c["px"])]
                 c["y"] = [round(float(v), 6) for v in res.y_axis.to_val(c["py"])]
     for k, lab in (rev.get("labels") or {}).items():
@@ -91,6 +91,24 @@ def _apply_review(fig: dict, rev: dict, res: ad.Result | None):
             fig["curves"][int(k)]["label"] = lab
     drop = set(rev.get("drop") or [])
     fig["curves"] = [c for i, c in enumerate(fig["curves"]) if i not in drop]
+    # data-point tables: name a symbol series (from the chart's legend), merge or drop series
+    pts = fig.get("points") or []
+    for k, name in (rev.get("symbols") or {}).items():
+        if int(k) < len(pts):
+            pts[int(k)]["name"] = name
+    for a, b in rev.get("merge_points") or []:          # [into, from]
+        if a < len(pts) and b < len(pts) and a != b:
+            for key in ("px", "py", "x", "y"):
+                if key in pts[a] and key in pts[b]:
+                    pts[a][key] = pts[a][key] + pts[b][key]
+            order = np.argsort(pts[a]["px"])
+            for key in ("px", "py", "x", "y"):
+                if key in pts[a]:
+                    pts[a][key] = [pts[a][key][i] for i in order]
+            pts[a]["n"] = len(pts[a]["px"])
+            pts[b]["n"] = 0
+    dropp = set(rev.get("drop_points") or [])
+    fig["points"] = [p for i, p in enumerate(pts) if i not in dropp and p["n"] > 0]
     if rev.get("status") in ("accepted", "rejected"):
         fig["status"] = rev["status"]
 
@@ -176,11 +194,12 @@ def process_report(pdf: Path, record: dict, data: Path, force_ocr: bool = False,
     (out / "pages.jsonl").write_text("".join(json.dumps(p) + "\n" for p in page_rows))
     (out / "report.json").write_text(json.dumps(report, indent=1))
     n_auto = sum(f["status"] in ("auto", "accepted") for f in figs if f["kind"] == "chart")
+    n_pts = sum(p["n"] for f in figs for p in f.get("points") or [] if "x" in p)
     charts = [f for f in figs if f["kind"] == "chart"]
     src = Counter(p["source"] for p in page_rows)
     why = Counter(re.sub(r"[\d.]+", "#", r) for f in charts for r in f.get("reasons") or [])
     log(f"{rid} {report['number'] or ''}: {len(page_rows)} pages ({', '.join(f'{v} {k}' for k, v in src.items())}), "
-        f"{len(figs)} figures, {len(charts)} with grids ({n_auto} digitized automatically), {len(tabs)} tables"
+        f"{len(figs)} figures, {len(charts)} with grids ({n_auto} digitized automatically, {n_pts} data points), {len(tabs)} tables"
         + (f"; review: {'; '.join(f'{v}x {k}' for k, v in why.most_common(3))}" if why else ""))
     return report
 

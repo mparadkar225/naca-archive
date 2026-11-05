@@ -70,6 +70,10 @@ FTS5; `connect` registers the same `rank` function the web page uses.
 4. Mask grid lines and text, bridge curves across the masked bands, link ink runs column
    by column into tracks that coast through crossings and dashes, rejoin broken tracks.
 5. Read labels inside the plot ("20°") and attach each to the nearest curve.
+6. Find data-point symbols (hollow outlines, usually with a centre dot, or solid blobs), group
+   them by shape, and give each kind a table of x, y values: for test-data charts the points
+   are the data and the faired curve is secondary. A curve through symbols is traced with
+   the symbols cut out.
 
 A figure is `auto` when both axes calibrate from at least three consistent labels and the
 tracks cover at least 85% of the curve ink; otherwise `needs_review`, with the reasons.
@@ -78,14 +82,21 @@ within 0.2% of full scale. The real-scan check is `tests/test_naca747.py`: it co
 automatic curves of NACA Report 747 with pyxrotor's hand-calibrated digitizing, and runs in
 the harvest workflow once the report is processed.
 
+Data points are in `points(figure_id, idx, symbol, name, n, x, y)`; the site shows each kind
+as a table and as markers on the plot, with a CSV download. On synthetic charts points come
+out within 0.1% of full scale; overlapping symbols can be missed or come out as a separate
+odd kind, and a chart with many of those goes to review.
+
 Not handled yet: charts without grids (indexed with caption and image, not digitized),
-log scales, data-point symbols, solid/dashed pairs (747 fig. 12), two y scales on one chart
+log scales, matching symbols to the chart's legend (name them in a review), solid/dashed pairs (747 fig. 12), two y scales on one chart
 (flagged for review).
 
 ## Reviewing
 
 Every figure page on the site shows the reading drawn on the scan and a form that writes a
-correction: accept or reject, replace an axis calibration, rename or drop curves. Save it as
+correction: accept or reject, replace an axis calibration, rename or drop curves, name a
+kind of data point from the legend (`"symbols": {"0": "Curtiss 714"}`), merge two kinds
+(`"merge_points": [[0, 3]]`) or drop one (`"drop_points": [3]`). Save it as
 `reviews/{report id}/{figure key}.json` on `main`; corrections are applied every time the
 report is processed.
 

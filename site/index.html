@@ -89,6 +89,13 @@ a { color: var(--focus); }
 .plot .tick { fill: var(--ink-2); font-size: 11px; }
 .plot path { fill: none; stroke: var(--trace); stroke-width: 2; }
 .plot path.dim { stroke-opacity: .25; }
+path.pt.solid { fill: var(--trace); }
+path.pt { fill: var(--panel); stroke: var(--trace); stroke-width: 1.6; stroke-dasharray: none; animation: none; }
+.plot g:hover path.pt { fill: var(--trace); }
+svg.mk { width: 14px; height: 14px; vertical-align: -2px; overflow: visible; }
+details.ptab { margin: .4rem 0; }
+details.ptab summary { cursor: pointer; }
+.tablewrap { max-height: 18rem; overflow: auto; }
 .plot .lab { fill: var(--trace); font-size: 12px; font-weight: 600; }
 .scan { max-width: 900px; margin-top: 12px; }
 .scan img { width: 100%; border: 1px solid var(--grid); background: #fff; }
@@ -100,6 +107,7 @@ a { color: var(--focus); }
 .reasons { color: var(--warn); font-size: 14px; margin: 6px 0; padding-left: 18px; }
 table.data { border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
 table.data td, table.data th { border-bottom: 1px solid var(--grid-fine); padding: 4px 12px 4px 0; text-align: left; vertical-align: top; }
+details.ptab table.data td, details.ptab table.data th { text-align: right; padding-left: 16px; }
 textarea { width: 100%; max-width: 900px; min-height: 120px; font: 13px/1.4 ui-monospace, monospace; color: var(--ink); background: var(--panel); border: 1px solid var(--grid); border-radius: 4px; padding: 8px; }
 .empty { color: var(--ink-2); max-width: 52ch; }
 label.inline { font-size: 13px; color: var(--ink-2); display: inline-flex; gap: 6px; align-items: center; }
@@ -110,7 +118,7 @@ input.small { width: 90px; font: inherit; font-size: 13px; padding: 3px 6px; col
   #detail { padding: 18px 16px 40px; }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .plot path { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: draw .9s ease-out forwards; }
+  .plot path:not(.pt) { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: draw .9s ease-out forwards; }
   @keyframes draw { to { stroke-dashoffset: 0; } }
 }
 </style>
@@ -178,7 +186,7 @@ async function init() {
   const c = JSON.parse(rows("SELECT value FROM meta WHERE key='counts'")[0].value);
   const rev = rows("SELECT count(*) n FROM figures WHERE status='needs_review'")[0].n;
   const pl = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
-  $("#counts").textContent = `${pl(c.reports, "report")}, ${pl(c.figures, "figure")}, ${pl(c.curves, "digitized curve")}, ${pl(c.tables, "table")}. ${rev ? pl(rev, "figure") + " to review." : "Nothing to review."}`;
+  $("#counts").textContent = `${pl(c.reports, "report")}, ${pl(c.figures, "figure")}, ${pl(c.curves, "digitized curve")}, ${pl(c.points || 0, "data point")}, ${pl(c.tables, "table")}. ${rev ? pl(rev, "figure") + " to review." : "Nothing to review."}`;
   const h = new URLSearchParams(location.hash.slice(1));
   if (h.get("q")) $("#q").value = h.get("q");
   search();
@@ -269,22 +277,33 @@ function showFigure(id) {
   const f = rows("SELECT f.*, r.title, r.number, r.year, r.authors, r.url, r.id rid FROM figures f JOIN reports r ON r.id=f.report_id WHERE f.id=?", [id])[0];
   if (!f) return;
   const curves = rows("SELECT idx, label, x, y FROM curves WHERE figure_id=? ORDER BY idx", [id]).map(c => ({ ...c, x: JSON.parse(c.x), y: JSON.parse(c.y) }));
+  const points = rows("SELECT idx, symbol, name, n, x, y FROM points WHERE figure_id=? ORDER BY idx", [id]).map(p => ({ ...p, x: JSON.parse(p.x), y: JSON.parse(p.y) }));
+  pointSeries = points;
   const reasons = JSON.parse(f.reasons || "[]");
   let html = `<p class="meta"><a href="#" id="back">${esc(f.number || f.rid)}</a>, page ${f.page}</p>
     <h2>Figure ${esc(f.label || "?")}</h2><p class="prose">${esc(f.caption || "No caption found.")}</p>
     <p><span class="tag ${f.status === "needs_review" ? "review" : f.status}">${f.status.replace("_", " ")}</span></p>`;
   if (reasons.length) html += `<ul class="reasons">${reasons.map(r => `<li>${esc(r)}</li>`).join("")}</ul>`;
-  if (curves.length) {
-    html += `<div class="plot-wrap"><div class="plot">${plot(curves)}</div>
-      <div class="toolbar"><button class="btn" id="csv">Download curves (CSV)</button></div></div>`;
+  if (curves.length || points.length) {
+    html += `<div class="plot-wrap"><div class="plot">${plot(curves, points)}</div>
+      <div class="toolbar">${points.length ? `<button class="btn" id="pcsv">Download data points (CSV)</button>` : ""}
+      ${curves.length ? `<button class="btn" id="csv">Download curves (CSV)</button>` : ""}</div></div>`;
+  }
+  if (points.length) {
+    html += `<h3>Data points</h3><p class="prose meta">Read from the plotted symbols, one table per kind of symbol. Name a kind from the chart's legend in the correction below.</p>`;
+    for (const p of points) {
+      html += `<details class="ptab"${points.length <= 3 ? " open" : ""}><summary><svg class="mk" viewBox="-7 -7 14 14" aria-hidden="true">${marker(p.idx)}</svg> ${esc(p.name || p.symbol)} <span class="meta">(${p.n})</span></summary>
+        <div class="tablewrap"><table class="data"><thead><tr><th>x</th><th>y</th></tr></thead><tbody>${p.x.map((x, k) => `<tr><td>${x}</td><td>${p.y[k]}</td></tr>`).join("")}</tbody></table></div></details>`;
+    }
   }
   html += `<div class="toolbar"><button class="btn" id="scanbtn">${f.check_image ? "Show the reading drawn on the scan" : "Show the scan"}</button></div>
     <div class="scan" id="scan" hidden><img alt="Scanned figure" src="reports/${esc(f.check_image || f.image)}"></div>`;
-  if (f.kind === "chart") html += reviewForm(f, curves);
+  if (f.kind === "chart") html += reviewForm(f, curves, points);
   $("#detail").innerHTML = html;
   $("#back").onclick = e => { e.preventDefault(); showReport(f.rid); };
   $("#scanbtn").onclick = () => { const s = $("#scan"); s.hidden = !s.hidden; };
   if ($("#csv")) $("#csv").onclick = () => download(`${f.number || f.rid}_fig${f.label || f.key}.csv`, toCSV(curves));
+  if ($("#pcsv")) $("#pcsv").onclick = () => download(`${f.number || f.rid}_fig${f.label || f.key}_points.csv`, pointsCSV(points));
   bindReview(f);
   $("#detail").scrollTop = 0;
   setHash({ fig: id });
@@ -297,9 +316,21 @@ function niceTicks(lo, hi, n = 8) {
   const t = []; for (let k = a; k <= b; k++) t.push(+(k * step).toFixed(10));
   return t;
 }
-function plot(curves) {
+// marker shapes for point series, drawn in the trace colour (shape, not colour, tells them apart)
+const MARKERS = ["M-4.5,0a4.5,4.5 0 1,0 9,0a4.5,4.5 0 1,0 -9,0", "M-4,-4h8v8h-8z", "M0,-5.5L5,4h-10z",
+  "M0,-5.5L5.5,0L0,5.5L-5.5,0z", "M0,5.5L5,-4h-10z", "M-5,-4L5,0L-5,4z", "M-4,4v-3a4,4 0 0,1 8,0v3z", "M-5,-1h10v2h-10zM-1,-5h2v10h-2z"];
+const SHAPES = ["circle", "square", "triangle up", "diamond", "triangle down", "triangle right", "half-round top"];
+let pointSeries = [];
+// the series' own shape where it has one; a second series of the same shape is drawn solid
+function marker(i) {
+  const p = pointSeries.find(q => q.idx === i) || { symbol: "" };
+  const k = SHAPES.findIndex(sh => p.symbol.replace("filled ", "").startsWith(sh));
+  const solid = /^filled |\([B-Z]\)$/.test(p.symbol);
+  return `<path class="pt${solid ? " solid" : ""}" d="${MARKERS[k >= 0 ? k : 7]}"/>`;
+}
+function plot(curves, points = []) {
   const W = 760, H = 440, L = 56, R = 16, T = 14, B = 34;
-  const xs = curves.flatMap(c => c.x), ys = curves.flatMap(c => c.y);
+  const xs = curves.flatMap(c => c.x).concat(points.flatMap(p => p.x)), ys = curves.flatMap(c => c.y).concat(points.flatMap(p => p.y));
   const xt = niceTicks(Math.min(...xs), Math.max(...xs)), yt = niceTicks(Math.min(0, ...ys), Math.max(...ys));
   const x0 = xt[0], x1 = xt.at(-1), y0 = yt[0], y1 = yt.at(-1);
   const X = v => L + (v - x0) / (x1 - x0) * (W - L - R), Y = v => H - B - (v - y0) / (y1 - y0) * (H - T - B);
@@ -315,7 +346,15 @@ function plot(curves) {
     const k = Math.floor(c.x.length * 0.1);
     s += `<text class="lab" x="${X(c.x[k]) + 4}" y="${Y(c.y[k]) - 6}">${esc(c.label || "#" + i)}</text>`;
   });
+  points.forEach(p => p.x.forEach((x, k) => {
+    s += `<g transform="translate(${X(x).toFixed(1)},${Y(p.y[k]).toFixed(1)})">${marker(p.idx)}<title>${esc(p.name || p.symbol)}: ${x}, ${p.y[k]}</title></g>`;
+  }));
   return s + `</svg>`;
+}
+function pointsCSV(points) {
+  let out = "series,symbol,x,y\n";
+  points.forEach(p => p.x.forEach((x, k) => out += `${p.idx},"${(p.name || p.symbol).replace(/"/g, '""')}",${x},${p.y[k]}\n`));
+  return out;
 }
 function toCSV(curves) {
   let out = "curve,label,x,y\n";
@@ -328,7 +367,7 @@ function download(name, text) {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
-function reviewForm(f, curves) {
+function reviewForm(f, curves, points = []) {
   return `<h3>Correct this reading</h3>
   <p class="prose meta">Saved corrections go in the repository as <code>reviews/${esc(f.rid)}/${esc(f.key)}.json</code> and are applied every time the report is processed.</p>
   <div class="toolbar">
@@ -340,6 +379,8 @@ function reviewForm(f, curves) {
   </div>
   <div class="toolbar">${curves.map(c => `<label class="inline">#${c.idx} <input class="small rv-lab" data-i="${c.idx}" value="${esc(c.label || "")}"></label>
      <label class="inline"><input type="checkbox" class="rv-drop" data-i="${c.idx}">drop</label>`).join("")}</div>
+  ${points.length ? `<div class="toolbar">${points.map(p => `<label class="inline"><svg class="mk" viewBox="-7 -7 14 14" aria-hidden="true">${marker(p.idx)}</svg> <input class="small rv-sym" data-i="${p.idx}" value="${esc(p.name || "")}" placeholder="${esc(p.symbol)}"></label>
+     <label class="inline"><input type="checkbox" class="rv-pdrop" data-i="${p.idx}">drop</label>`).join("")}</div>` : ""}
   <p class="meta">The first grid lines are the leftmost and the topmost; y steps are negative when values fall going down.</p>
   <textarea id="rv-out" readonly aria-label="Correction file"></textarea>
   <div class="toolbar"><button class="btn" id="rv-copy">Copy correction</button></div>`;
@@ -355,7 +396,11 @@ function bindReview(f) {
     if (Object.keys(labels).length) o.labels = labels;
     const drop = [...document.querySelectorAll(".rv-drop:checked")].map(i => +i.dataset.i);
     if (drop.length) o.drop = drop;
-    document.querySelectorAll(".plot path").forEach(p => p.classList.toggle("dim", drop.includes(+p.dataset.i)));
+    const syms = {}; document.querySelectorAll(".rv-sym").forEach(i => { if (i.value !== i.defaultValue) syms[i.dataset.i] = i.value; });
+    if (Object.keys(syms).length) o.symbols = syms;
+    const pdrop = [...document.querySelectorAll(".rv-pdrop:checked")].map(i => +i.dataset.i);
+    if (pdrop.length) o.drop_points = pdrop;
+    document.querySelectorAll(".plot path[data-i]").forEach(p => p.classList.toggle("dim", drop.includes(+p.dataset.i)));
     out.value = JSON.stringify(o, null, 1);
   };
   $("#detail").querySelectorAll("input, select").forEach(e => e.addEventListener("input", upd));

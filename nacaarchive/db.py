@@ -34,12 +34,15 @@ CREATE TABLE figures(id INTEGER PRIMARY KEY, report_id TEXT, key TEXT, page INTE
   image TEXT, check_image TEXT, UNIQUE(report_id, key));
 CREATE TABLE curves(id INTEGER PRIMARY KEY, figure_id INTEGER, idx INTEGER, label TEXT, n INTEGER,
   x TEXT, y TEXT);
+CREATE TABLE points(id INTEGER PRIMARY KEY, figure_id INTEGER, idx INTEGER, symbol TEXT, name TEXT,
+  n INTEGER, x TEXT, y TEXT);
 CREATE TABLE tables(id INTEGER PRIMARY KEY, report_id TEXT, key TEXT, page INTEGER, label TEXT,
   caption TEXT, ncols INTEGER, rows TEXT, status TEXT, confidence REAL);
 CREATE VIRTUAL TABLE search USING fts4(kind, report_id, ref, title, body, notindexed=kind,
   notindexed=report_id, notindexed=ref, tokenize=porter);
 CREATE INDEX figures_report ON figures(report_id);
 CREATE INDEX curves_figure ON curves(figure_id);
+CREATE INDEX points_figure ON points(figure_id);
 CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT);
 """
 
@@ -96,7 +99,7 @@ def build(data: Path, out: Path, include_page_text: bool = True) -> dict:
     tmp.unlink(missing_ok=True)
     con = sqlite3.connect(tmp)
     con.executescript(SCHEMA)
-    n = dict(reports=0, pages=0, figures=0, curves=0, tables=0)
+    n = dict(reports=0, pages=0, figures=0, curves=0, points=0, tables=0)
     for rp in sorted((data / "reports").glob("*/report.json")):
         r = json.loads(rp.read_text())
         rid = r["id"]
@@ -139,6 +142,12 @@ def build(data: Path, out: Path, include_page_text: bool = True) -> dict:
                 con.execute("INSERT INTO curves(figure_id,idx,label,n,x,y) VALUES (?,?,?,?,?,?)",
                             (fid, i, c.get("label"), len(c["x"]), json.dumps(c["x"]), json.dumps(c["y"])))
                 n["curves"] += 1
+            for i, p in enumerate(f.get("points") or []):
+                if "x" not in p:
+                    continue
+                con.execute("INSERT INTO points(figure_id,idx,symbol,name,n,x,y) VALUES (?,?,?,?,?,?,?)",
+                            (fid, i, p["symbol"], p.get("name"), p["n"], json.dumps(p["x"]), json.dumps(p["y"])))
+                n["points"] += p["n"]
         seen = set()
         for t in r.get("tables", []):
             if t["key"] in seen:

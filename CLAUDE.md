@@ -27,6 +27,13 @@
 - To look at real crops from here, run the debug-figs workflow (pushes crops of chosen
   reports to a temporary `debug-figs` branch); the Actions cache and artifacts can't be
   downloaded through this sandbox's proxy, and the Pages site isn't reachable either.
+- Data-point symbols (`symbols.py`): holes are looked for in the ink *with* the grid first
+  (opaque symbols hide the grid; removing a grid band also removes a symbol edge lying on
+  it), cells and curve/grid pockets are dropped by their sides on grid lines unless dotted.
+  Shapes come from the interior's width profile and are grouped by clustering, not by
+  prototype name. Curves through symbols are traced with the symbols cut out, keeping short
+  pieces (`min_piece`) for rejoining. When symbols are present, curve coverage is a note,
+  not a review reason. Synthetic test: `tests/test_symbols.py`.
 - Tesseract drops leading decimal points (".02" -> "02"): `autodigitize.leading_dot`.
 - OCR over a grid is garbage: text inside a plot is found from small ink components after
   whitening grid lines, then OCR'd word by word.
