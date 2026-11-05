@@ -12,7 +12,7 @@
   "Aeronautics (General)"
  ],
  "url": "https://ntrs.nasa.gov/citations/19820018343",
- "pipeline": 4,
+ "pipeline": 5,
  "pages": 34,
  "text_sources": [
   "ocr",
@@ -2984,8 +2984,8 @@
      ]
     },
     {
-     "symbol": "half-round bottom",
-     "glyph": "\u25e1",
+     "symbol": "circle (B)",
+     "glyph": "\u25cb",
      "n": 2,
      "px": [
       810.5,
@@ -3021,7 +3021,7 @@
      ]
     },
     {
-     "symbol": "circle (B)",
+     "symbol": "circle (C)",
      "glyph": "\u25cb",
      "n": 1,
      "px": [
@@ -3043,7 +3043,7 @@
      ]
     },
     {
-     "symbol": "half-round bottom (B)",
+     "symbol": "half-round bottom",
      "glyph": "\u25e1",
      "n": 1,
      "px": [
