@@ -1,0 +1,38 @@
+# Push the figure crops and digitizing overlays of a few reports to a temporary
+# `debug-figs` branch, so the digitizer can be tuned on real scans from a machine that
+# can't reach the Actions cache. Figure crops only (the site publishes the same images);
+# never PDFs. Delete the branch when done.
+name: debug-figs
+on:
+  workflow_dispatch:
+    inputs:
+      ids:
+        description: "NTRS ids, space separated"
+        required: true
+permissions:
+  contents: write
+jobs:
+  figs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore figure images
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            data/pdfs
+            data/reports/*/fig
+          key: files-none
+          restore-keys: files-
+      - name: Push crops to debug-figs
+        run: |
+          mkdir out
+          for id in ${{ inputs.ids }}; do
+            [ -d data/reports/$id/fig ] && cp -r data/reports/$id/fig out/$id
+          done
+          ls out
+          cd out
+          git init -q -b debug-figs
+          git add -A
+          git -c user.name="naca-archive bot" -c user.email="actions@users.noreply.github.com" commit -q -m "debug figures"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" debug-figs
