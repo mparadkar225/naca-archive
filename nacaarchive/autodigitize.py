@@ -204,14 +204,43 @@ def _parse_labels(img: np.ndarray, words: list[Word], side: str) -> list[tuple[f
         if w.conf < 30:
             continue
         t = w.text
-        # NACA labels are written ".02", "-.10": Tesseract usually drops a leading point
-        if "." not in t and re.fullmatch(r"-?\d+", t) and leading_dot(img, w):
-            t = t.replace("-", "-.") if t.startswith("-") else "." + t
+        # NACA labels are written ".02", "-.10", "1.6": Tesseract usually drops the point
+        if "." not in t and re.fullmatch(r"-?\d+", t):
+            k = inner_dot(img, w, len(t.lstrip("-")))
+            if k:
+                d = t.lstrip("-")
+                t = ("-" if t.startswith("-") else "") + d[:k] + "." + d[k:]
+            elif leading_dot(img, w):
+                t = t.replace("-", "-.") if t.startswith("-") else "." + t
         v = parse_number(t)
         if v is None:
             continue
         out.append(((w.cy if side in ("left", "right") else w.cx), v))
     return out
+
+
+def inner_dot(img: np.ndarray, w: Word, n: int) -> int:
+    """A decimal point between the digits of a number read as "16" ("1.6"): the number of
+    digits before it, or 0 when there is none."""
+    import cv2
+
+    h, wd = w.y1 - w.y0, w.x1 - w.x0
+    if n < 2 or h < 8:
+        return 0
+    X0, X1 = int(w.x0), int(w.x1)
+    Y0, Y1 = int(w.y0 + 0.45 * h), int(min(w.y1 + 0.3 * h, img.shape[0]))
+    sub = (img[Y0:Y1, X0:X1] < 140).astype(np.uint8)
+    nc, _, st, cen = cv2.connectedComponentsWithStats(sub)
+    for i in range(1, nc):
+        bx, by, bw, bh, area = st[i]
+        if not (0.07 * h <= bw <= 0.3 * h and 0.07 * h <= bh <= 0.3 * h and area >= 0.5 * bw * bh):
+            continue
+        if by + bh >= sub.shape[0] or by == 0:
+            continue
+        f = (cen[i][0]) / max(wd, 1)
+        if 0.15 < f < 0.85:
+            return int(min(max(round(f * n), 1), n - 1))
+    return 0
 
 
 def leading_dot(img: np.ndarray, w: Word) -> bool:
@@ -532,6 +561,51 @@ def digitize(img: np.ndarray, g: Grid, min_points: int = 15) -> Result:
         curves.append(c)
     status = "auto" if not reasons else "needs_review"
     return Result(g, axes, xa, ya, curves, cov, status, reasons, level, points)
+
+
+def share_axes(results: list[Result]) -> None:
+    """Charts stacked in a column share an x axis whose labels are printed under the lowest
+    one only (NACA RM E6J31, RM L7D10 and many more); charts side by side share a y axis
+    labelled at the left. A chart whose axis didn't calibrate takes the calibration of a
+    chart on the same page whose grid lines are at the same positions."""
+    for r in results:
+        changed = False
+        for attr, name in (("x_axis", "x"), ("y_axis", "y")):
+            a = getattr(r, attr)
+            if a is not None and a.ok:
+                continue
+            for o in results:
+                b = getattr(o, attr)
+                if o is r or b is None or not b.ok:
+                    continue
+                mine = r.grid.vlines if name == "x" else r.grid.hlines
+                theirs = o.grid.vlines if name == "x" else o.grid.hlines
+                if _same_lines(mine, theirs):
+                    setattr(r, attr, b)
+                    r.grid.notes.append(f"{name} axis calibration taken from the chart at {list(o.grid.box)}, "
+                                        "whose grid lines line up with this one's")
+                    r.reasons = [x for x in r.reasons if not x.startswith(f"{name} axis not calibrated")]
+                    changed = True
+                    break
+        if changed:
+            _revalue(r)
+
+
+def _same_lines(a, b, tol: float = 6.0) -> bool:
+    a, b = np.asarray(a, float), np.asarray(b, float)
+    if len(a) < 3 or len(b) < 3:
+        return False
+    hit = [np.min(np.abs(b - v)) <= tol for v in a]
+    return sum(hit) >= max(3, 0.8 * len(a))
+
+
+def _revalue(r: Result) -> None:
+    if r.x_axis is None or r.y_axis is None or not (r.x_axis.ok and r.y_axis.ok):
+        return
+    for c in r.curves + r.points:
+        c["x"] = [round(float(v), 6) for v in r.x_axis.to_val(c["px"])]
+        c["y"] = [round(float(v), 6) for v in r.y_axis.to_val(c["py"])]
+    r.status = "auto" if not r.reasons else "needs_review"
 
 
 def inner_text(img: np.ndarray, g: Grid, max_h: int = 75, max_w: int = 90) -> list[Word]:

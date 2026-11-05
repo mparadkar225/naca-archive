@@ -75,3 +75,23 @@ def test_labels_read_for_most_curves():
     res, chart = _digitize_synthetic(2, 0.0)
     labs = {c["label"] for c in res.curves} - {None}
     assert len(labs & set(chart.curves)) >= 3
+
+
+def test_share_axes_between_stacked_charts():
+    """Charts stacked in a column: only the lowest has x labels; the others borrow its x."""
+    import numpy as np
+    from nacaarchive.figures import Grid
+
+    xs = np.arange(100.0, 1100.0, 100.0)
+    xa = A.Axis(xs, np.arange(10) * 0.2, [(100.0, 0.0, True)] * 4, 4, 0.2, 0.0, "bottom")
+    ya = A.Axis(np.arange(50.0, 450.0, 50.0), np.arange(8)[::-1] * 0.1, [], 4, -0.1, 0.0, "left")
+    bad_x = A.Axis(xs, np.zeros(10), [], 0, 0.0, 1.0, "bottom")
+    top = A.Result(Grid((100, 50, 1000, 400), xs + 2, np.arange(50.0, 450.0, 50.0)), {}, bad_x, ya,
+                    [dict(label=None, px=[300.0, 500.0], py=[100.0, 150.0])], 0.9, "needs_review",
+                    ["x axis not calibrated from tick labels"],
+                    points=[dict(symbol="circle", n=1, px=[700.0], py=[200.0])])
+    low = A.Result(Grid((100, 500, 1000, 900), xs, np.arange(500.0, 900.0, 50.0)), {}, xa, ya, [], 0.9, "auto", [])
+    A.share_axes([top, low])
+    assert top.status == "auto" and top.x_axis is xa
+    assert top.curves[0]["x"] == pytest.approx([0.4, 0.8]) and top.points[0]["x"] == pytest.approx([1.2])
+    assert any("taken from the chart" in n for n in top.grid.notes)

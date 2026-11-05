@@ -34,6 +34,11 @@
   prototype name. Curves through symbols are traced with the symbols cut out, keeping short
   pieces (`min_piece`) for rejoining. When symbols are present, curve coverage is a note,
   not a review reason. Synthetic test: `tests/test_symbols.py`.
+- Stacked charts share one x axis labelled under the lowest (NACA RM E6J31, RM L7D10):
+  `autodigitize.share_axes` lends a calibration between charts on a page whose grid lines
+  line up. Hand-lettered italic labels ("1.4", "1.2") often defeat Tesseract entirely; a
+  digit classifier trained on labels that did read would be the next step.
+- Some NTRS downloads come wrapped (header f5 52 80 df, length, file name): `ntrs.unwrap_pdf`.
 - Tesseract drops leading decimal points (".02" -> "02"): `autodigitize.leading_dot`.
 - OCR over a grid is garbage: text inside a plot is found from small ink components after
   whitening grid lines, then OCR'd word by word.

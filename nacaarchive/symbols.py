@@ -78,7 +78,7 @@ def classify(region: np.ndarray) -> tuple[str, float]:
     return best, float(np.abs(p - PROTOTYPES[best]).sum())
 
 
-def find_symbols(ink: np.ndarray, text_boxes=(), min_size: int = 18, max_size: int = 70,
+def find_symbols(ink: np.ndarray, text_boxes=(), min_size: int = 14, max_size: int = 70,
                  raw: np.ndarray | None = None, vlines=(), hlines=()) -> list[Symbol]:
     """Symbols in a plot's ink mask (grid removed, curves bridged across grid lines).
 

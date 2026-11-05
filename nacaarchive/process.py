@@ -153,14 +153,20 @@ def process_report(pdf: Path, record: dict, data: Path, force_ocr: bool = False,
         caps = F.captions(page.words)
         F.attach_captions(grids, caps)
         claimed = set()
-        for k, g in enumerate(grids):
-            key = unique(f"p{page.number}-{k}")
+        results = []
+        for g in grids:
             try:
-                res = ad.digitize(img, g)
-                fig = res.as_dict()
+                results.append((ad.digitize(img, g), None))
             except Exception as e:  # keep going: one bad chart must not lose the report
-                res, fig = None, dict(box=list(g.box), label=g.label, caption=g.caption, curves=[],
-                                      status="needs_review", reasons=[f"digitizer error: {e!r}"])
+                results.append((None, e))
+        ad.share_axes([r for r, _ in results if r is not None])
+        for k, (g, (res, err)) in enumerate(zip(grids, results)):
+            key = unique(f"p{page.number}-{k}")
+            if res is not None:
+                fig = res.as_dict()
+            else:
+                fig = dict(box=list(g.box), label=g.label, caption=g.caption, curves=[],
+                           status="needs_review", reasons=[f"digitizer error: {err!r}"])
             fig.update(key=key, page=page.number, kind="chart")
             claimed.add(g.label)
             rev_p = reviews / f"{key}.json"
