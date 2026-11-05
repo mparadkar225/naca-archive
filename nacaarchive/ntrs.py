@@ -146,13 +146,22 @@ class Client:
         out = dest_dir / f"{record['id']}.pdf"
         if out.exists() and out.stat().st_size > 0:
             return out
-        data = self._get(BASE + link if link.startswith("/") else link)
-        if not data.startswith(b"%PDF"):
-            raise ValueError(f"{record['id']}: download is not a PDF ({data[:40]!r})")
+        data = unwrap_pdf(self._get(BASE + link if link.startswith("/") else link), record["id"])
         tmp = out.with_suffix(".part")
         tmp.write_bytes(data)
         tmp.replace(out)
         return out
+
+
+def unwrap_pdf(data: bytes, rid="") -> bytes:
+    """The PDF in a download. Some NTRS files (about one in seven of the old scans) come
+    wrapped: a header starting f5 52 80 df, a length and the file name, then the PDF."""
+    if data.startswith(b"%PDF"):
+        return data
+    i = data.find(b"%PDF-", 0, 1 << 16)
+    if i > 0:
+        return data[i:]
+    raise ValueError(f"{rid}: download is not a PDF (starts {data[:160].hex(' ')})")
 
 
 def removal_action(item: dict) -> str | None:

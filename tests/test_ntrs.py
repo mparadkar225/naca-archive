@@ -85,3 +85,12 @@ def test_removal_action():
     assert removal_action({"disseminated": "DOCUMENT_AND_METADATA", "distribution": "DO_NOT_DISTRIBUTE"}) == "remove"
     assert removal_action({"disseminated": "METADATA_ONLY"}) == "strip_document"
     assert removal_action({"disseminated": "DOCUMENT_AND_METADATA", "distribution": "PUBLIC"}) is None
+
+
+def test_unwrap_pdf():
+    from nacaarchive.ntrs import unwrap_pdf
+    pdf = b"%PDF-1.4\n...%%EOF"
+    head = bytes.fromhex("f55280df00000002011fcc99") + b"19930093302.pdf" + bytes(49)
+    assert unwrap_pdf(pdf) == pdf and unwrap_pdf(head + pdf) == pdf
+    with pytest.raises(ValueError, match="f5 52 80 df"):
+        unwrap_pdf(head + b"compressed")
