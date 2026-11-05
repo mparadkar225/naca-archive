@@ -77,7 +77,8 @@ def main(argv=None):
                 print(f"time budget reached after {done} reports")
                 break
             try:
-                process_report(pdf, recs[rid], data, force_ocr=a.force_ocr, reviews=a.reviews)
+                process_report(pdf, recs[rid], data, force_ocr=a.force_ocr, reviews=a.reviews,
+                               deadline=t0 + 60 * (a.budget_min + 20) if a.budget_min else None)
                 done += 1
             except Exception as e:
                 failed.append(rid)

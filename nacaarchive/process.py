@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import json
 import re
+import signal
+import time
 from collections import Counter
 from pathlib import Path
 
@@ -113,8 +115,33 @@ def _apply_review(fig: dict, rev: dict, res: ad.Result | None):
         fig["status"] = rev["status"]
 
 
+CHART_SECONDS = 120   # a chart that takes longer is left for review (one took hours on WR L-594)
+
+
+class ChartTimeout(Exception):
+    pass
+
+
+def _digitize_limited(img, g, seconds=CHART_SECONDS):
+    """ad.digitize with a wall-clock limit (SIGALRM; main thread on Unix only)."""
+    if seconds is None or not hasattr(signal, "SIGALRM"):
+        return ad.digitize(img, g)
+
+    def stop(*_):
+        raise ChartTimeout(f"digitizing took over {seconds} s")
+    old = signal.signal(signal.SIGALRM, stop)
+    signal.alarm(int(seconds))
+    try:
+        return ad.digitize(img, g)
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, old)
+
+
 def process_report(pdf: Path, record: dict, data: Path, force_ocr: bool = False, log=print,
-                   reviews: Path | None = None) -> dict:
+                   reviews: Path | None = None, deadline: float | None = None) -> dict:
+    """deadline (time.time() value): charts reached after it are kept for review, not
+    digitized, so a run's time budget also holds inside a long report."""
     rid = str(record["id"])
     out = data / "reports" / rid
     (out / "fig").mkdir(parents=True, exist_ok=True)
@@ -131,7 +158,9 @@ def process_report(pdf: Path, record: dict, data: Path, force_ocr: bool = False,
         used.add(k)
         return k
 
+    t_report = time.time()
     for page in open_pages(pdf, force_ocr=force_ocr):
+        t_page = time.time()
         img, turn = page.image, 0
         ang = F.deskew_angle(img)
         upright = F.rotate(img, ang)
@@ -155,8 +184,11 @@ def process_report(pdf: Path, record: dict, data: Path, force_ocr: bool = False,
         claimed = set()
         results = []
         for g in grids:
+            if deadline is not None and time.time() > deadline:
+                results.append((None, "time budget reached before this chart"))
+                continue
             try:
-                results.append((ad.digitize(img, g), None))
+                results.append((_digitize_limited(img, g), None))
             except Exception as e:  # keep going: one bad chart must not lose the report
                 results.append((None, e))
         ad.share_axes([r for r, _ in results if r is not None])
@@ -166,7 +198,7 @@ def process_report(pdf: Path, record: dict, data: Path, force_ocr: bool = False,
                 fig = res.as_dict()
             else:
                 fig = dict(box=list(g.box), label=g.label, caption=g.caption, curves=[],
-                           status="needs_review", reasons=[f"digitizer error: {err!r}"])
+                           status="needs_review", reasons=[err if isinstance(err, str) else f"digitizer error: {err!r}"])
             fig.update(key=key, page=page.number, kind="chart")
             claimed.add(g.label)
             rev_p = reviews / f"{key}.json"
@@ -191,6 +223,9 @@ def process_report(pdf: Path, record: dict, data: Path, force_ocr: bool = False,
                 if t:
                     t.update(page=page.number, key=unique(f"p{page.number}-t{c['label']}"))
                     tabs.append(t)
+        dt = time.time() - t_page
+        if dt > 60:
+            log(f"{rid}: page {page.number} took {dt:.0f} s ({len(grids)} grids)")
     report = dict(
         id=rid, number=record.get("_number"), title=record.get("title"), year=record.get("_year"),
         authors=[a.get("meta", {}).get("author", {}).get("name") for a in record.get("authorAffiliations") or []],
@@ -206,7 +241,8 @@ def process_report(pdf: Path, record: dict, data: Path, force_ocr: bool = False,
     why = Counter(re.sub(r"[\d.]+", "#", r) for f in charts for r in f.get("reasons") or [])
     log(f"{rid} {report['number'] or ''}: {len(page_rows)} pages ({', '.join(f'{v} {k}' for k, v in src.items())}), "
         f"{len(figs)} figures, {len(charts)} with grids ({n_auto} digitized automatically, {n_pts} data points), {len(tabs)} tables"
-        + (f"; review: {'; '.join(f'{v}x {k}' for k, v in why.most_common(3))}" if why else ""))
+        + (f"; review: {'; '.join(f'{v}x {k}' for k, v in why.most_common(3))}" if why else "")
+        + f" [{(time.time() - t_report) / 60:.1f} min]")
     return report
 
 
@@ -222,4 +258,6 @@ def needs_processing(data: Path, rid: str) -> bool:
         return True
     # figure images are kept out of git (CI cache only): redo the report if they're gone
     fig = p.parent / "fig"
-    return any(f["kind"] == "chart" and not (fig / f"{f['key']}-check.jpg").exists() for f in r["figures"])
+    # (charts that hit the time limit have no overlay either; redoing them won't help)
+    return any(f["kind"] == "chart" and not (fig / f"{f['key']}-check.jpg").exists()
+               and not any("took over" in x for x in f.get("reasons") or []) for f in r["figures"])

@@ -49,3 +49,16 @@ def test_search(built):
         "SELECT c.x, c.y FROM curves c JOIN figures f ON f.id=c.figure_id WHERE f.label='9'")]
     x, y = min(curves, key=lambda c: c[0][0])
     assert 0.24 < x[0] < 0.30 and 0.035 < max(y) < 0.047
+
+
+def test_slow_chart_is_left_for_review(monkeypatch):
+    import time as _t
+    from nacaarchive import process as P
+    monkeypatch.setattr(P.ad, "digitize", lambda img, g: _t.sleep(5))
+    t = _t.time()
+    try:
+        P._digitize_limited(None, None, seconds=1)
+        raise AssertionError("no timeout")
+    except P.ChartTimeout as e:
+        assert "took over 1 s" in str(e)
+    assert _t.time() - t < 3

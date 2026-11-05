@@ -37,6 +37,8 @@ jobs:
   harvest:
     runs-on: ubuntu-latest
     timeout-minutes: 350
+    env:
+      PYTHONUNBUFFERED: "1"   # progress lines reach the log as they happen (a cancelled run lost them all)
     environment:
       name: github-pages
     steps:
