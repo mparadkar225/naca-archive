@@ -67,3 +67,21 @@ def test_harvest_and_redistributions(tmp_path):
     assert not (tmp_path / "pdfs" / "1.pdf").exists() and not (tmp_path / "reports" / "1").exists()
     # a removed record is never re-added
     assert "1" not in H.harvest(q, tmp_path, client=cl, log=lambda *a: None)
+
+
+def test_ids_are_fetched_whatever_the_topic(tmp_path):
+    from nacaarchive.harvest import harvest, _read_jsonl
+
+    class C:
+        def search(self, params, limit=None):
+            return iter([])
+
+        def citation(self, rid):
+            return {"id": int(rid), "title": "Summary of the high speed program",
+                    "otherReportNumbers": ["NASA-TM-82891"], "publications": [{"publicationDate": "1982-05-01T00:00:00.0000000+00:00"}]}
+
+    q = tmp_path / "q.toml"
+    q.write_text("keep = 'propell'\nids = [19820018343]\n")
+    harvest(q, tmp_path, client=C(), log=lambda *a: None)
+    r = _read_jsonl(tmp_path / "metadata" / "records.jsonl")["19820018343"]
+    assert r["_queries"] == ["ids"] and r["_number"] == "NASA-TM-82891"

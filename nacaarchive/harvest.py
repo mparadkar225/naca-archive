@@ -109,6 +109,23 @@ def harvest(queries: Path, data: Path, client: Client | None = None, limit: int 
                 changed[rid] = r
         state.setdefault("queries", {})[q["name"]] = {"seen": seen, "kept": kept}
         log(f"{q['name']}: {seen} results, {kept} on topic")
+    # reports asked for by id (`ids = [...]` in the query file): kept whatever their topic
+    for rid in map(str, cfg.get("ids", [])):
+        if rid in removed:
+            continue
+        try:
+            r = client.citation(rid)
+        except Exception as e:
+            log(f"{rid}: citation failed: {e}")
+            continue
+        r["_number"] = report_number(r)
+        r["_year"] = year(r)
+        old = recs.get(rid)
+        r["_queries"] = sorted(set((old or {}).get("_queries", [])) | {"ids"})
+        if old != r:
+            recs[rid] = r
+            changed[rid] = r
+        log(f"{rid}: {r['_number'] or ''} {r.get('title', '')[:80]}")
     _write_jsonl(store, recs)
     _dump_json(data / "harvest_state.json", state)
     log(f"{len(recs)} records, {len(changed)} new or changed")

@@ -6,6 +6,12 @@
 keep = '''propell|airscrew|air-screw|prop-?fan|counter-?rotat|contra-?rotat|dual-?rotat|tractor screw|blade[- ]element|slipstream|spinner'''
 drop = '''rocket propell|propellant|marine propell|ship propell|torpedo|submarine'''
 
+# reports asked for by NTRS id, fetched every run whatever the queries return
+ids = [
+  19820018343,   # NASA TM-82891, advanced high-speed propeller program (scimitar blades)
+  19930086559,   # scimitar propellers / high tip Mach number
+]
+
 [[query]]
 name = "naca-propeller"
 q = "propeller"
