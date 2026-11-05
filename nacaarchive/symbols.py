@@ -106,7 +106,7 @@ def find_symbols(ink: np.ndarray, text_boxes=(), min_size: int = 14, max_size: i
         if any(b[4] for b in inside):
             continue
         out.append(s)
-    syms = out
+    syms = _not_lettering(ink, out)
     if len(syms) < 3 and not any(s.dot for s in syms):     # a stray pocket or letter, not data
         return []
     # one chart uses one symbol size: drop holes far from the typical size
@@ -117,6 +117,38 @@ def find_symbols(ink: np.ndarray, text_boxes=(), min_size: int = 14, max_size: i
     if len(hollow) >= 4 and sum(s.dot for s in hollow) >= 0.6 * len(hollow):
         syms = [s for s in syms if s.filled or s.dot]
     return syms
+
+
+def _not_lettering(ink: np.ndarray, syms: list[Symbol]) -> list[Symbol]:
+    """Drop holes that are letters of hand lettering OCR did not read ("Low-speed tests",
+    the NACA stamp): a letter has letter-sized neighbours on its baseline, close beside it.
+    A data point's neighbours are the curve (long and thin) or other symbols."""
+    import cv2
+
+    if not syms:
+        return syms
+    n, _, st, _ = cv2.connectedComponentsWithStats(ink.astype(np.uint8), connectivity=8)
+    comps = st[1:, :4]
+    keep = []
+    for s in syms:
+        x0, y0, x1, y1 = s.box
+        h = max(y1 - y0, 1)
+        cy = (y0 + y1) / 2
+        near = 0
+        for cx_, cy0, cw, ch in comps:
+            if cw > 2.5 * h or not (0.45 * h <= ch <= 1.6 * h):      # a curve, a speck or a big shape
+                continue
+            if cx_ <= x1 and cx_ + cw >= x0 and cy0 <= y1 and cy0 + ch >= y0:   # the symbol itself
+                continue
+            if abs(cy0 + ch / 2 - cy) > 0.35 * h:
+                continue
+            gap = max(x0 - (cx_ + cw), cx_ - x1)
+            if gap <= 0.7 * h and not any(t is not s and t.box[0] <= cx_ + cw / 2 <= t.box[2]
+                                          and t.box[1] <= cy0 + ch / 2 <= t.box[3] for t in syms):
+                near += 1
+        if near < 2:
+            keep.append(s)
+    return keep
 
 
 def _grid_sides(s: Symbol, vlines, hlines, tol: float = 4.0) -> int:

@@ -7,9 +7,9 @@ from nacaarchive import autodigitize as ad
 from nacaarchive import figures as F
 
 
-def symbol_chart(seed=0):
+def symbol_chart(seed=0, ink="k"):
     rng = np.random.default_rng(seed)
-    c = synth.Chart(grid_color="0.1", labels=False)
+    c = synth.Chart(grid_color="0.1", labels=False, ink=ink)
     for k, marker in enumerate(("o", "s", "^")):
         j = np.linspace(0.3 + 0.25 * k, 0.9 + 0.3 * k, 60)
         f = lambda x: (0.05 + 0.03 * k) * (1 - ((x - j[0]) / (j[-1] - j[0] + 0.15)) ** 2)
@@ -41,3 +41,21 @@ def test_symbol_tables(seed, skew):
     assert 18 <= sum(p["n"] for p in res.points) <= 26
     assert res.status == "auto", res.reasons
     assert len(res.curves) >= 3            # faired curves are traced too (best effort)
+
+
+def test_faded_pencil_symbols_are_found():
+    """A faded scan whose pencilled symbols are lighter than the inked grid and whose darkest
+    ink is mid-gray (WR L-177): the points are found where they are. Telling circles from
+    squares at this contrast is not asked for here."""
+    chart = symbol_chart(2, ink="0.3")
+    page, truth = synth.render_page(chart, seed=2, skew_deg=0.2)
+    img = (255 - (255 - np.asarray(page).astype(float)) * 0.85).astype(np.uint8)
+    img = F.rotate(img, F.deskew_angle(img))
+    res = ad.digitize(img, F.find_grids(img)[0])
+    tx = np.concatenate([p[0] for p in chart.points.values()])
+    ty = np.concatenate([p[1] for p in chart.points.values()])
+    got = [(x, y) for p in res.points for x, y in zip(p["x"], p["y"])]
+    assert len(got) >= 18
+    for x, y in got:
+        i = np.argmin(np.hypot((tx - x) / 1.6, (ty - y) / 0.16))
+        assert abs(tx[i] - x) < 0.006 * 1.6 and abs(ty[i] - y) < 0.006 * 0.16, (x, y, tx[i], ty[i])

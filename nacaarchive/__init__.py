@@ -3,4 +3,4 @@
 __version__ = "0.1.0"
 
 # Bump when processing output changes: reports processed with an older version are redone.
-PIPELINE_VERSION = 4
+PIPELINE_VERSION = 5

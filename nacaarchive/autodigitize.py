@@ -311,6 +311,12 @@ def ink_mask(img: np.ndarray, g: Grid, text_boxes=(), level: int | None = None, 
         gl = [img[int(round(h)), x0:x1 + 1] for h in g.hlines]
         grid_gray = float(np.median(np.concatenate(gl))) if gl else 150.0
         level = int(np.clip(grid_gray - 25, 90, 175))
+        paper, dark = np.median(sub), np.percentile(sub, 1)
+        if level < dark + 15:
+            # a faded scan with a dark grid (WR L-177): the level under the grid's gray is
+            # hardly above the darkest ink, so pencilled symbols lighter than the grid are
+            # lost; split paper from ink instead
+            level = int(np.clip((paper + dark) / 2, 120, 175))
     ink = sub < level
     for v in g.vlines:
         c = int(round(v)) - x0

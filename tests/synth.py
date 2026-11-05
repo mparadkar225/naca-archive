@@ -33,6 +33,7 @@ class Chart:
     points: dict = field(default_factory=dict)  # name -> (x array, y array, matplotlib marker)
     grid_color: str = "0.55"
     labels: bool = True                          # curve labels inside the plot
+    ink: str = "k"                               # curve and symbol colour (pencil: lighter than the grid)
 
 
 def default_chart(seed=0) -> Chart:
@@ -76,15 +77,15 @@ def render_page(chart: Chart, figure_no=9, table=False, seed=0, skew_deg=0.35, s
     ax.set_xlabel(chart.xlabel, family="serif", fontsize=11)
     ax.set_ylabel(chart.ylabel, family="serif", fontsize=11)
     for k, (lab, (cx, cy)) in enumerate(chart.curves.items()):
-        ax.plot(cx, cy, "k", lw=1.6, ls="--" if lab in chart.dashed else "-")
+        ax.plot(cx, cy, color=chart.ink, lw=1.6, ls="--" if lab in chart.dashed else "-")
         if chart.labels:
             i = int(len(cx) * 0.15)
             ax.text(cx[i], cy[i] + 0.035 * (y1 - y0), lab, family="serif", fontsize=10, ha="center")
     for name, (px_, py_, marker) in chart.points.items():
         # hollow NACA-style symbols with a dot at the exact point, drawn over the curve
-        ax.plot(px_, py_, ls="none", marker=marker, ms=8 if marker != "^" else 9, mfc="white", mec="k",
+        ax.plot(px_, py_, ls="none", marker=marker, ms=8 if marker != "^" else 9, mfc="white", mec=chart.ink,
                 mew=0.9, zorder=5)
-        ax.plot(px_, py_, ls="none", marker="o", ms=0.9, mfc="k", mec="k", zorder=6)
+        ax.plot(px_, py_, ls="none", marker="o", ms=0.9, mfc=chart.ink, mec=chart.ink, zorder=6)
     fig.text(0.5, 0.36, f"FIGURE {figure_no}.—Power coefficient against V/nD for several blade angles.",
              ha="center", family="serif", fontsize=10)
     if table:
