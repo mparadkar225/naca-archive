@@ -28,7 +28,7 @@ from . import autodigitize as ad
 from . import figures as F
 from . import tables as T
 from .ntrs import citation_url
-from .pages import Word, open_pages
+from .pages import Word, open_pages, orientation, tesseract
 
 
 def _rotate_words(words: list[Word], shape, deg: float):
@@ -114,15 +114,25 @@ def process_report(pdf: Path, record: dict, data: Path, force_ocr: bool = False,
         return k
 
     for page in open_pages(pdf, force_ocr=force_ocr):
-        img = page.image
+        img, turn = page.image, 0
         ang = F.deskew_angle(img)
-        img = F.rotate(img, ang)
-        if page.source == "text-layer":
-            _rotate_words(page.words, img.shape, ang)
+        upright = F.rotate(img, ang)
+        grids = F.find_grids(upright)
+        if grids:
+            # a chart page: landscape charts are printed sideways, so turn the page upright
+            # and read it again (tick labels and captions must be upright for OCR)
+            turn = orientation(img)
+            if turn:
+                img = np.ascontiguousarray(np.rot90(img, turn))
+                page.words, page.source = tesseract(img), "ocr"
+                ang = F.deskew_angle(img)
+                upright = F.rotate(img, ang)
+                grids = F.find_grids(upright)
+        img = upright
+        _rotate_words(page.words, img.shape, ang)
         page_rows.append({"page": page.number, "text": page.text, "source": page.source,
-                          "skew": round(ang, 3)})
+                          "skew": round(ang, 3), "turn": 90 * turn})
         caps = F.captions(page.words)
-        grids = F.find_grids(img)
         F.attach_captions(grids, caps)
         claimed = set()
         for k, g in enumerate(grids):

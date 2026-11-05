@@ -154,6 +154,50 @@ def axis_labels(img: np.ndarray, g: Grid, side: str) -> tuple[list[tuple[float, 
     words = tesseract(crop, psm=11, whitelist=NUMERIC)
     for w in words:
         w.x0, w.x1, w.y0, w.y1 = w.x0 + r[0], w.x1 + r[0], w.y0 + r[1], w.y1 + r[1]
+    out = _parse_labels(img, words, side)
+    if len(out) < 4:
+        # sparse OCR misses short labels (".5") and labels touching the frame:
+        # read each label on its own instead
+        words2 = strip_words(img, r)
+        out2 = _parse_labels(img, words2, side)
+        if len(out2) > len(out):
+            out, words = out2, words2
+    return out, words
+
+
+def strip_words(img: np.ndarray, r) -> list[Word]:
+    """Numbers in a strip beside the plot, OCR'd one at a time: long lines (the frame, axis
+    rules) are dropped, small ink components grouped into words, each word read with psm 7."""
+    import cv2
+
+    x0, y0, x1, y1 = r
+    sub = img[y0:y1, x0:x1]
+    dark = (sub < 150).astype(np.uint8)
+    n, lab, st, _ = cv2.connectedComponentsWithStats(dark)
+    keep = np.zeros_like(dark)
+    for i in range(1, n):
+        bx, by, bw, bh, area = st[i]
+        if bh <= 80 and bw <= 80 and area >= 10:
+            keep[lab == i] = 1
+    groups = cv2.dilate(keep, cv2.getStructuringElement(cv2.MORPH_RECT, (25, 7)))
+    n, lab, st, _ = cv2.connectedComponentsWithStats(groups)
+    words = []
+    for i in range(1, n):
+        bx, by, bw, bh, _ = st[i]
+        if bh < 16 or bh > 110 or bw > 260:
+            continue
+        pad = 12
+        cx0, cy0 = max(bx - pad, 0), max(by - pad, 0)
+        piece = np.where(keep[cy0:by + bh + pad, cx0:bx + bw + pad] > 0, 0, 255).astype(np.uint8)
+        piece = np.pad(piece, 12, constant_values=255)
+        found = tesseract(piece, psm=7, whitelist=NUMERIC) or tesseract(piece, psm=10, whitelist=NUMERIC)
+        for w in found:
+            ox, oy = x0 + cx0 - 12, y0 + cy0 - 12
+            words.append(Word(w.text, w.x0 + ox, w.y0 + oy, w.x1 + ox, w.y1 + oy, w.conf, 2_000_000 + i))
+    return words
+
+
+def _parse_labels(img: np.ndarray, words: list[Word], side: str) -> list[tuple[float, float]]:
     out = []
     for w in words:
         if w.conf < 30:
@@ -166,26 +210,33 @@ def axis_labels(img: np.ndarray, g: Grid, side: str) -> tuple[list[tuple[float, 
         if v is None:
             continue
         out.append(((w.cy if side in ("left", "right") else w.cx), v))
-    return out, words
+    return out
 
 
 def leading_dot(img: np.ndarray, w: Word) -> bool:
-    """A decimal point just left of a number: a small compact blob near the baseline."""
+    """A decimal point just left of a number: a small compact blob near the baseline. In
+    italic NACA lettering the point sits under the slanted digit's foot, so the search
+    reaches a little under the digit too."""
     import cv2
 
     h = w.y1 - w.y0
     if h < 6:
         return False
-    x0, x1 = int(w.x0 - 0.9 * h), int(w.x0 + 0.1 * h)
-    y0, y1 = int(w.y0 + 0.45 * h), int(w.y1 + 0.2 * h)
-    if x0 < 0 or y0 < 0 or y1 > img.shape[0]:
+    # a window larger than the search box, so a blob cut by the box edge is seen whole
+    X0, X1 = int(w.x0 - 1.1 * h), int(w.x0 + 0.5 * h)
+    Y0, Y1 = int(w.y0 + 0.3 * h), int(w.y1 + 0.35 * h)
+    if X0 < 0 or Y0 < 0 or Y1 > img.shape[0]:
         return False
-    sub = (img[y0:y1, x0:x1] < 140).astype(np.uint8)
-    n, _, st, _ = cv2.connectedComponentsWithStats(sub)
+    sub = (img[Y0:Y1, X0:X1] < 140).astype(np.uint8)
+    n, _, st, cen = cv2.connectedComponentsWithStats(sub)
     for i in range(1, n):
         bx, by, bw, bh, area = st[i]
-        if 0.07 * h <= bw <= 0.35 * h and 0.07 * h <= bh <= 0.35 * h and area >= 0.5 * bw * bh \
-                and bx + bw < sub.shape[1] - 1:      # not the digit's own edge
+        cx, cy = cen[i][0] + X0, cen[i][1] + Y0
+        if not (0.07 * h <= bw <= 0.35 * h and 0.07 * h <= bh <= 0.35 * h and area >= 0.5 * bw * bh):
+            continue
+        if bx == 0 or by == 0 or bx + bw >= sub.shape[1] or by + bh >= sub.shape[0]:
+            continue
+        if w.x0 - 0.9 * h <= cx <= w.x0 + 0.3 * h and cy >= w.y0 + 0.6 * h:
             return True
     return False
 

@@ -91,6 +91,26 @@ def tesseract(img: np.ndarray | Image.Image, psm: int = 3, whitelist: str | None
     return words
 
 
+_DICTWORD = re.compile(r"^[A-Za-z][a-z]{2,}[.,;:]?$")
+
+
+def orientation(img: np.ndarray) -> int:
+    """Quarter turns (counterclockwise, as np.rot90's k) that make a page's text upright:
+    0, 1 or 3. Landscape charts are printed sideways on portrait pages; Tesseract's own
+    orientation detection is unreliable on figure pages with little text, so sparse OCR
+    is tried at each turn of a half-size image and the turn that reads the most ordinary
+    words wins (it must clearly beat upright)."""
+    small = np.asarray(Image.fromarray(img).reduce(2))
+
+    def score(k):
+        ws = tesseract(np.rot90(small, k), psm=11)
+        return sum(w.conf for w in ws if w.conf > 60 and _DICTWORD.match(w.text))
+
+    s0 = score(0)
+    k, best = max(((k, score(k)) for k in (1, 3)), key=lambda t: t[1])
+    return k if best > 150 and best > 2 * s0 else 0
+
+
 def open_pages(pdf: Path, force_ocr: bool = False, min_quality: float = 0.6, dpi: int = DPI):
     """Yield Page objects for each page of the PDF."""
     import pymupdf as fitz

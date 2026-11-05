@@ -18,6 +18,15 @@
   runs in GitHub Actions or locally. The API field formats (otherReportNumbers, dates) were
   taken from NASA's OpenAPI documentation and not yet seen live: check the first harvest's
   records.jsonl and adjust `harvest.report_number` / `harvest.year` if needed.
+- Landscape charts are printed sideways (common in NASA TN D-series): chart pages are turned
+  upright by `pages.orientation` (sparse OCR at each quarter turn; Tesseract's OSD guessed
+  wrong on figure pages).
+- Short tick labels (".5") and labels touching the frame are missed by sparse OCR:
+  `autodigitize.strip_words` reads them one at a time. In italic lettering the decimal point
+  sits under the digit's foot (`leading_dot`).
+- To look at real crops from here, run the debug-figs workflow (pushes crops of chosen
+  reports to a temporary `debug-figs` branch); the Actions cache and artifacts can't be
+  downloaded through this sandbox's proxy, and the Pages site isn't reachable either.
 - Tesseract drops leading decimal points (".02" -> "02"): `autodigitize.leading_dot`.
 - OCR over a grid is garbage: text inside a plot is found from small ink components after
   whitening grid lines, then OCR'd word by word.
