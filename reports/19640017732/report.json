@@ -1,0 +1,382 @@
+{
+ "id": "19640017732",
+ "number": null,
+ "title": "Dynamic Tests of V/STOL Transport Models",
+ "year": 1964,
+ "authors": [
+  "Marion O McKinney",
+  "Robert H Kirby"
+ ],
+ "abstract": "This paper presents a summary of results obtained in dynamic tests of free-flight models of various configurations suitable for V/STOL transport aircraft at the NASA Langley Research Center. The configurations covered will be the tilt-wing propeller-driven type as represented by the XC-142A tri-service transport, the fan-in-wing type as represented by the XV-5A research airplane, and the jet-lift type as represented by the Dornier 00-31 transport. The test techniques themselves are not described in this paper since they have been described in detail previously in references 1 and 2.",
+ "subjects": [
+  "Aircraft Design, Testing and Performance"
+ ],
+ "url": "https://ntrs.nasa.gov/citations/19640017732",
+ "pipeline": 5,
+ "pages": 40,
+ "text_sources": [
+  "ocr",
+  "text-layer"
+ ],
+ "figures": [
+  {
+   "key": "p8-c9",
+   "page": 8,
+   "kind": "figure",
+   "label": "9",
+   "caption": "Figure 9 presents the results of the descent tests of the XC-l42A model in the form of pilot ratings of the behavior of the model for a range of descent angle and wing- incidence conditions. The pilot rating system used in the model tests is similar to the",
+   "box": null,
+   "curves": [],
+   "status": "not_digitized",
+   "reasons": [
+    "no grid found"
+   ]
+  },
+  {
+   "key": "p9-c10",
+   "page": 9,
+   "kind": "figure",
+   "label": "10",
+   "caption": "Figure 10 shows a 6\u00b0 descent capability, above the angle against wing-incidence angle. dotted area, where no difference from level flight was detected even when the model was intentionally disturbed.",
+   "box": null,
+   "curves": [],
+   "status": "not_digitized",
+   "reasons": [
+    "no grid found"
+   ]
+  },
+  {
+   "key": "p9-c12",
+   "page": 9,
+   "kind": "figure",
+   "label": "12",
+   "caption": "Figure 12 shows time histories of the model motions at 7\u00b0 and 10\u00b0 descent angle after the model had been intentionally disturbed from a smooth flying condition. At 7\u00b0 descent angle, two rapid control pulses were used by the pilot to set up the motion and he was",
+   "box": null,
+   "curves": [],
+   "status": "not_digitized",
+   "reasons": [
+    "no grid found"
+   ]
+  },
+  {
+   "key": "p22-c1",
+   "page": 22,
+   "kind": "figure",
+   "label": "1",
+   "caption": "Figure 1.- Photograph of the 1/9-scale XC-142A flying model.",
+   "box": [
+    420,
+    192,
+    2865,
+    2030
+   ],
+   "curves": [],
+   "status": "not_digitized",
+   "reasons": [
+    "no grid found"
+   ]
+  },
+  {
+   "key": "p23-c3",
+   "page": 23,
+   "kind": "figure",
+   "label": "3",
+   "caption": "Figure 3.- Effect of ground proximity on lift of the XC-142A model.",
+   "box": [
+    769,
+    1526,
+    2470,
+    1678
+   ],
+   "curves": [],
+   "status": "not_digitized",
+   "reasons": [
+    "no grid found"
+   ]
+  },
+  {
+   "key": "p24-c4",
+   "page": 24,
+   "kind": "figure",
+   "label": "4",
+   "caption": "Figure 4.- Effect of ground proximity on static stability of the XC-142A model in hovering flight",
+   "box": [
+    804,
+    648,
+    2606,
+    1577
+   ],
+   "curves": [],
+   "status": "not_digitized",
+   "reasons": [
+    "no grid found"
+   ]
+  },
+  {
+   "key": "p25-c5",
+   "page": 25,
+   "kind": "figure",
+   "label": "5",
+   "caption": "Figure 5.- Time history of stick-fixed pitching motion of the XC-142A model in ground effect.",
+   "box": [
+    573,
+    1422,
+    2693,
+    1761
+   ],
+   "curves": [],
+   "status": "not_digitized",
+   "reasons": [
+    "no grid found"
+   ]
+  },
+  {
+   "key": "p26-c6",
+   "page": 26,
+   "kind": "figure",
+   "label": "6",
+   "caption": "Figure 6.- Effect of ground proximity on the aileron effectiveness of the XC-142A model. 8, = +h0\u00b0.",
+   "box": [
+    525,
+    273,
+    2495,
+    1725
+   ],
+   "curves": [],
+   "status": "not_digitized",
+   "reasons": [
+    "no grid found"
+   ]
+  },
+  {
+   "key": "p27-c7",
+   "page": 27,
+   "kind": "figure",
+   "label": "7",
+   "caption": "Figure 7.- Stick-fixed pitching motions of the XC-142A model in the transition flight range.",
+   "box": [
+    926,
+    534,
+    2652,
+    1552
+   ],
+   "curves": [],
+   "status": "not_digitized",
+   "reasons": [
+    "no grid found"
+   ]
+  },
+  {
+   "key": "p28-c8",
+   "page": 28,
+   "kind": "figure",
+   "label": "8",
+   "caption": "Figure 8.- Balance of forces in descent and simulated descent conditions.",
+   "box": null,
+   "curves": [],
+   "status": "not_digitized",
+   "reasons": [
+    "no grid found"
+   ]
+  },
+  {
+   "key": "p29-c9",
+   "page": 29,
+   "kind": "figure",
+   "label": "9",
+   "caption": "Figure 9.- Pilot ratings obtained in descent tests of the XC-142A model.",
+   "box": [
+    854,
+    635,
+    2729,
+    1787
+   ],
+   "curves": [],
+   "status": "not_digitized",
+   "reasons": [
+    "no grid found"
+   ]
+  },
+  {
+   "key": "p30-c10",
+   "page": 30,
+   "kind": "figure",
+   "label": "10",
+   "caption": "Figure 10.- Descent capability of the XC-142A model in the transition flight range.",
+   "box": [
+    945,
+    730,
+    2632,
+    1858
+   ],
+   "curves": [],
+   "status": "not_digitized",
+   "reasons": [
+    "no grid found"
+   ]
+  },
+  {
+   "key": "p31-c11",
+   "page": 31,
+   "kind": "figure",
+   "label": "11",
+   "caption": "Figure 11.- Time histories of the XC-142A model in controlled flight without intentional disturb- ances. iy = 30\u00b0.",
+   "box": [
+    630,
+    1112,
+    2758,
+    1786
+   ],
+   "curves": [],
+   "status": "not_digitized",
+   "reasons": [
+    "no grid found"
+   ]
+  },
+  {
+   "key": "p32-c12",
+   "page": 32,
+   "kind": "figure",
+   "label": "12",
+   "caption": "Figure 12.- Time histories of the XC-142A model in controlled flight after a deliberate disturb- ance. iy = 309.",
+   "box": [
+    1871,
+    597,
+    2770,
+    1627
+   ],
+   "curves": [],
+   "status": "not_digitized",
+   "reasons": [
+    "no grid found"
+   ]
+  },
+  {
+   "key": "p33-c13",
+   "page": 33,
+   "kind": "figure",
+   "label": "13",
+   "caption": "Figure 13.- Roll control power required on the XC-142A model in transition. Data scaled to full scale.",
+   "box": [
+    1089,
+    621,
+    2596,
+    1573
+   ],
+   "curves": [],
+   "status": "not_digitized",
+   "reasons": [
+    "no grid found"
+   ]
+  },
+  {
+   "key": "p34-c14",
+   "page": 34,
+   "kind": "figure",
+   "label": "14",
+   "caption": "Figure 14.- Yaw control power required on the XC-142A model in transition. Data scaled to full scale.",
+   "box": [
+    1134,
+    539,
+    2649,
+    1560
+   ],
+   "curves": [],
+   "status": "not_digitized",
+   "reasons": [
+    "no grid found"
+   ]
+  },
+  {
+   "key": "p35-c15",
+   "page": 35,
+   "kind": "figure",
+   "label": "15",
+   "caption": "Figure 15.- Photograph of the 0.18 scale XV-5A flying model.",
+   "box": [
+    544,
+    229,
+    2641,
+    1973
+   ],
+   "curves": [],
+   "status": "not_digitized",
+   "reasons": [
+    "no grid found"
+   ]
+  },
+  {
+   "key": "p36-c15",
+   "page": 36,
+   "kind": "figure",
+   "label": "15",
+   "caption": "Figure 15.- Concluded.",
+   "box": [
+    404,
+    285,
+    2830,
+    1978
+   ],
+   "curves": [],
+   "status": "not_digitized",
+   "reasons": [
+    "no grid found"
+   ]
+  },
+  {
+   "key": "p37-c16",
+   "page": 37,
+   "kind": "figure",
+   "label": "16",
+   "caption": "Figure 16.- Time histories of the stick-fixed pitching and rolling motions of the XV-5A model in hovering flight.",
+   "box": [
+    2028,
+    957,
+    2636,
+    1781
+   ],
+   "curves": [],
+   "status": "not_digitized",
+   "reasons": [
+    "no grid found"
+   ]
+  },
+  {
+   "key": "p38-c17",
+   "page": 38,
+   "kind": "figure",
+   "label": "17",
+   "caption": "Figure 17.- Effect of fences on the stick-fixed rolling motion of the XV-5A model in hovering flight.",
+   "box": [
+    946,
+    948,
+    1792,
+    1798
+   ],
+   "curves": [],
+   "status": "not_digitized",
+   "reasons": [
+    "no grid found"
+   ]
+  },
+  {
+   "key": "p39-c18",
+   "page": 39,
+   "kind": "figure",
+   "label": "18",
+   "caption": "Figure 18.- Stick-fixed pitching motions of the XV-5A model in the transition flight range.",
+   "box": [
+    986,
+    489,
+    2471,
+    1630
+   ],
+   "curves": [],
+   "status": "not_digitized",
+   "reasons": [
+    "no grid found"
+   ]
+  }
+ ],
+ "tables": []
+}
