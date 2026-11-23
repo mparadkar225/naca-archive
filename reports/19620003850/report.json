@@ -78876,7 +78876,7 @@
      ]
     },
     {
-     "symbol": "circle (C)",
+     "symbol": "half-round bottom with dot",
      "glyph": "\u25e1",
      "n": 3,
      "px": [
@@ -78891,7 +78891,7 @@
      ]
     },
     {
-     "symbol": "circle (D)",
+     "symbol": "circle (C)",
      "glyph": "\u25cb",
      "n": 3,
      "px": [
@@ -78951,7 +78951,7 @@
      ]
     },
     {
-     "symbol": "circle (E)",
+     "symbol": "circle (D)",
      "glyph": "\u25cb",
      "n": 3,
      "px": [
@@ -78966,7 +78966,7 @@
      ]
     },
     {
-     "symbol": "circle (F)",
+     "symbol": "circle (E)",
      "glyph": "\u25cb",
      "n": 2,
      "px": [
@@ -78979,7 +78979,7 @@
      ]
     },
     {
-     "symbol": "circle (G)",
+     "symbol": "circle (F)",
      "glyph": "\u25cb",
      "n": 2,
      "px": [
@@ -78992,7 +78992,7 @@
      ]
     },
     {
-     "symbol": "circle (H)",
+     "symbol": "circle (G)",
      "glyph": "\u25cb",
      "n": 2,
      "px": [
@@ -79005,8 +79005,8 @@
      ]
     },
     {
-     "symbol": "right triangle \u25e5",
-     "glyph": "\u25e5",
+     "symbol": "triangle down",
+     "glyph": "\u25bd",
      "n": 2,
      "px": [
       684.5,
@@ -79066,7 +79066,7 @@
      ]
     },
     {
-     "symbol": "triangle down",
+     "symbol": "triangle down (B)",
      "glyph": "\u25bd",
      "n": 1,
      "px": [
@@ -79132,7 +79132,7 @@
      ]
     },
     {
-     "symbol": "circle (I)",
+     "symbol": "circle (H)",
      "glyph": "\u25cb",
      "n": 1,
      "px": [
@@ -79154,7 +79154,7 @@
      ]
     },
     {
-     "symbol": "circle (J)",
+     "symbol": "circle (I)",
      "glyph": "\u25cb",
      "n": 1,
      "px": [
@@ -79198,7 +79198,7 @@
      ]
     },
     {
-     "symbol": "circle (K)",
+     "symbol": "circle (J)",
      "glyph": "\u25cb",
      "n": 1,
      "px": [
@@ -79209,7 +79209,7 @@
      ]
     },
     {
-     "symbol": "circle (L)",
+     "symbol": "circle (K)",
      "glyph": "\u25cb",
      "n": 1,
      "px": [
@@ -79220,7 +79220,7 @@
      ]
     },
     {
-     "symbol": "circle (M)",
+     "symbol": "circle (L)",
      "glyph": "\u25cb",
      "n": 1,
      "px": [
@@ -79231,7 +79231,7 @@
      ]
     },
     {
-     "symbol": "circle (N)",
+     "symbol": "circle (M)",
      "glyph": "\u25cb",
      "n": 1,
      "px": [
@@ -79253,7 +79253,7 @@
      ]
     },
     {
-     "symbol": "triangle down (B)",
+     "symbol": "triangle down (C)",
      "glyph": "\u25bd",
      "n": 1,
      "px": [
@@ -85409,7 +85409,7 @@
      ]
     },
     {
-     "symbol": "half-round top with dot",
+     "symbol": "circle with dot",
      "glyph": "\u25cb",
      "n": 3,
      "px": [
@@ -85452,7 +85452,7 @@
      ]
     },
     {
-     "symbol": "square with dot",
+     "symbol": "half-round bottom",
      "glyph": "\u25e1",
      "n": 2,
      "px": [
@@ -85524,7 +85524,7 @@
      ]
     },
     {
-     "symbol": "half-round bottom",
+     "symbol": "half-round bottom (B)",
      "glyph": "\u25e1",
      "n": 1,
      "px": [
@@ -85535,7 +85535,7 @@
      ]
     },
     {
-     "symbol": "half-round bottom (B)",
+     "symbol": "half-round bottom (C)",
      "glyph": "\u25e1",
      "n": 1,
      "px": [
@@ -87461,22 +87461,22 @@
       1866.0
      ],
      "values": [
-      2.4278571428571425,
-      3.999285714285714,
-      5.570714285714286,
-      7.142142857142857,
-      8.713571428571429,
-      10.285,
-      11.856428571428571,
-      13.427857142857142,
-      14.999285714285714,
-      16.570714285714285,
-      18.142142857142858,
-      19.713571428571427,
-      21.285,
-      22.85642857142857
+      2.4278571428571434,
+      3.9992857142857154,
+      5.5707142857142875,
+      7.142142857142859,
+      8.71357142857143,
+      10.285000000000002,
+      11.856428571428575,
+      13.427857142857146,
+      14.999285714285719,
+      16.57071428571429,
+      18.14214285714286,
+      19.713571428571434,
+      21.285000000000007,
+      22.856428571428577
      ],
-     "step": 1.5714285714285714,
+     "step": 1.5714285714285718,
      "inliers": 2,
      "residual": 0.0005,
      "labels": [
